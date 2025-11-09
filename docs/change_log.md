@@ -609,3 +609,47 @@ _This section will be updated as new feature requests are made._
 - Theme filter defaulted to "All Themes" instead of last played theme
 - Theme was not being preserved when `initGame()` was called multiple times
 
+### 28. Bug Fixes: Theme Tracking and Download Files
+**Date**: 2025-11-09  
+**Request**: Fix critical bugs in theme tracking and ensure downloaded files include theme column/field.
+
+**Bug Fixes**:
+
+1. **`getRandomTheme()` Undefined Variable Bug**
+   - **Issue**: Function used undefined `themeKeys` variable, causing `ReferenceError`
+   - **Fix**: Changed to use `Object.keys(emojiThemes)` directly within the function
+   - **Impact**: Function now works correctly when called from multiple locations (lines 1644, 1790, 1894)
+
+2. **Duplicate `lastPlayedTheme` Clearing**
+   - **Issue**: `lastPlayedTheme` was cleared in both `displayStatistics()` and tab switching code, creating dead code
+   - **Fix**: Removed clearing from `displayStatistics()` (line 1317), keeping only tab switching code (line 991)
+   - **Impact**: Maintains consistency with `lastPlayedGridSize` handling pattern
+
+3. **`lastPlayedTheme` Applied to Wrong User**
+   - **Issue**: When selecting a different username from dropdown, `lastPlayedTheme` from previous user's game was incorrectly applied
+   - **Fix**: 
+     - Added username check in `displayStatistics()`: only uses `lastPlayedTheme` if `lastPlayedUsername === username`
+     - Added clearing logic in username dropdown change event: clears `lastPlayedTheme` when different user is selected
+   - **Impact**: Theme filter now correctly applies only to the user who just played the game
+
+4. **Download Files Missing Theme**
+   - **Issue**: Downloaded CSV and JSON files did not include theme column/field
+   - **Fix**:
+     - **Server-side**: Updated `/api/download/:username/:format` endpoint to generate CSV/JSON dynamically from JSON file (not static files)
+     - **Client-side**: Added verification to check if server response includes theme, falls back to client-side generation if missing
+     - **CSV**: Header includes "Theme" column, each row includes theme value
+     - **JSON**: Ensures all games have theme property before downloading
+   - **Impact**: Downloaded files now always include theme, matching displayed game history
+
+**Technical Details**:
+- `getRandomTheme()` now uses `const themeKeys = Object.keys(emojiThemes);` inside function
+- `lastPlayedTheme` clearing follows same pattern as `lastPlayedGridSize` (only in tab switching code)
+- Username verification prevents cross-user theme contamination
+- Server download endpoint generates files on-the-fly from JSON (most up-to-date source)
+- Client-side fallback always includes theme in generated files
+- Added debugging logs to track theme in download process
+
+**Files Modified**:
+- `script.js`: Fixed `getRandomTheme()`, `lastPlayedTheme` handling, download verification
+- `server.js`: Updated download endpoint to generate CSV/JSON dynamically with theme included
+
