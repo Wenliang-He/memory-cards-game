@@ -398,23 +398,50 @@ app.get('/api/download/:username/:format', (req, res) => {
         const username = req.params.username;
         const format = req.params.format || 'csv';
         const filename = sanitizeFilename(username);
+        const jsonFile = path.join(DATA_DIR, `${filename}.json`);
 
-        if (format === 'csv') {
-            const csvFile = path.join(DATA_DIR, `${filename}.csv`);
-            if (fs.existsSync(csvFile)) {
-                res.download(csvFile, `${username}_history.csv`);
-            } else {
-                res.status(404).json({ error: 'File not found' });
+        // Read from JSON file (most up-to-date) and generate download file
+        if (fs.existsSync(jsonFile)) {
+            const data = fs.readFileSync(jsonFile, 'utf8');
+            const parsed = JSON.parse(data);
+            
+            // Handle both old format (array) and new format (object with username)
+            let games = [];
+            if (Array.isArray(parsed)) {
+                games = parsed;
+            } else if (parsed.games) {
+                games = parsed.games;
             }
-        } else if (format === 'json') {
-            const jsonFile = path.join(DATA_DIR, `${filename}.json`);
-            if (fs.existsSync(jsonFile)) {
-                res.download(jsonFile, `${username}_history.json`);
+            
+            // Verify username matches (case-sensitive)
+            const fileUsername = parsed.username || decodeCaseFromFilename(filename);
+            if (fileUsername !== username) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+            
+            if (format === 'csv') {
+                // Generate CSV with theme column
+                const csvHeader = 'Date,Time (seconds),Moves,Grid Size,Theme\n';
+                const csvRows = games.map(game => {
+                    const dateStr = new Date(game.date).toISOString();
+                    const theme = game.theme || 'animals'; // Default to animals for old records
+                    return `${dateStr},${game.time},${game.moves},${game.gridSize}x${game.gridSize},${theme}`;
+                }).join('\n');
+                const csvContent = csvHeader + csvRows;
+                
+                res.setHeader('Content-Type', 'text/csv;charset=utf-8');
+                res.setHeader('Content-Disposition', `attachment; filename="${username}_history.csv"`);
+                res.send(csvContent);
+            } else if (format === 'json') {
+                // Send JSON directly
+                res.setHeader('Content-Type', 'application/json');
+                res.setHeader('Content-Disposition', `attachment; filename="${username}_history.json"`);
+                res.json(games);
             } else {
-                res.status(404).json({ error: 'File not found' });
+                res.status(400).json({ error: 'Invalid format. Use csv or json' });
             }
         } else {
-            res.status(400).json({ error: 'Invalid format. Use csv or json' });
+            res.status(404).json({ error: 'File not found' });
         }
     } catch (error) {
         console.error('Error downloading file:', error);

@@ -1531,6 +1531,10 @@ downloadBtn.addEventListener('click', async () => {
     
     // Get games from localStorage first (always available)
     const games = await getGameHistory(username);
+    console.log('Download - games retrieved:', games);
+    console.log('Download - sample game with theme:', games[0]);
+    console.log('Download - all games have theme?', games.every(g => g.theme !== undefined));
+    
     if (games.length === 0) {
         alert('No game history found for this user');
         return;
@@ -1549,16 +1553,56 @@ downloadBtn.addEventListener('click', async () => {
         });
         
         if (response.ok && response.status === 200) {
+            // For server downloads, verify content includes theme and regenerate if needed
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${username}_history.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            downloadSuccess = true;
+            
+            if (format === 'csv') {
+                // Check if CSV includes Theme column
+                const text = await blob.text();
+                console.log('Server CSV content (first 200 chars):', text.substring(0, 200));
+                if (!text.includes('Theme')) {
+                    console.log('Server CSV missing Theme column, using client-side generation');
+                    downloadSuccess = false; // Force fallback to client-side
+                } else {
+                    // Server CSV has theme, use it
+                    const newBlob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+                    const url = window.URL.createObjectURL(newBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${username}_history.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    downloadSuccess = true;
+                }
+            } else {
+                // For JSON, ensure theme is included
+                const text = await blob.text();
+                try {
+                    const jsonData = JSON.parse(text);
+                    console.log('Server JSON data:', jsonData);
+                    // Ensure all games have theme
+                    const gamesWithTheme = Array.isArray(jsonData) ? jsonData.map(game => ({
+                        ...game,
+                        theme: game.theme || 'animals'
+                    })) : jsonData;
+                    const jsonContent = JSON.stringify(gamesWithTheme, null, 2);
+                    const newBlob = new Blob([jsonContent], { type: 'application/json' });
+                    const url = window.URL.createObjectURL(newBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${username}_history.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    downloadSuccess = true;
+                } catch (e) {
+                    console.log('Error parsing server JSON, using client-side generation:', e);
+                    downloadSuccess = false; // Force fallback to client-side
+                }
+            }
         }
     } catch (error) {
         console.log('Server download failed, using localStorage:', error);
@@ -1576,15 +1620,22 @@ downloadBtn.addEventListener('click', async () => {
                 const rows = games.map(game => {
                     const dateStr = new Date(game.date).toISOString();
                     const theme = game.theme || 'animals'; // Default to animals for old records
+                    console.log('CSV row - game:', game, 'theme:', theme);
                     // Escape commas in CSV
                     return `${dateStr},${game.time},${game.moves},${game.gridSize}x${game.gridSize},${theme}`;
                 }).join('\n');
                 content = header + rows;
+                console.log('CSV content generated:', content.substring(0, 200)); // Log first 200 chars
                 filename = `${username}_history.csv`;
                 mimeType = 'text/csv;charset=utf-8;';
             } else {
-                // Create JSON
-                content = JSON.stringify(games, null, 2);
+                // Create JSON - ensure theme is included
+                const gamesWithTheme = games.map(game => ({
+                    ...game,
+                    theme: game.theme || 'animals' // Ensure theme is always present
+                }));
+                console.log('JSON games with theme:', gamesWithTheme);
+                content = JSON.stringify(gamesWithTheme, null, 2);
                 filename = `${username}_history.json`;
                 mimeType = 'application/json;charset=utf-8;';
             }
