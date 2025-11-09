@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Card Game</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <h1>🎮 Memory Card Game</h1>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="game">Game</button>
+                <button class="tab-btn" data-tab="statistics">Statistics</button>
+            </div>
+        </header>
+
+        <!-- Game Tab -->
+        <div id="game-tab" class="tab-content active">
+            <div class="game-stats">
+                <div class="stat">
+                    <span class="stat-label">Time:</span>
+                    <span id="timer">00:00</span>
+                    <button id="pause-btn" class="btn btn-secondary pause-btn" style="display: none;">Pause</button>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Moves:</span>
+                    <span id="moves">0</span>
+                </div>
+            </div>
+
+            <div class="game-controls">
+                <div class="control-group">
+                    <label for="username">Username: <span style="color: red;">*</span></label>
+                    <input type="text" id="username" placeholder="Enter your name" maxlength="20" required>
+                </div>
+                <div id="username-error" class="error-message" style="display: none; color: red; font-size: 0.9em; margin-top: 5px;">Please enter a username before starting the game</div>
+                <div class="control-group">
+                    <label for="grid-size">Grid Size:</label>
+                    <select id="grid-size">
+                        <option value="3">3x3</option>
+                        <option value="4" selected>4x4</option>
+                        <option value="5">5x5</option>
+                        <option value="6">6x6</option>
+                        <option value="7">7x7</option>
+                        <option value="8">8x8</option>
+                        <option value="9">9x9</option>
+                    </select>
+                </div>
+                <button id="start-btn" class="btn btn-primary">Start Game</button>
+                <button id="reset-btn" class="btn btn-secondary" style="display: none;">Reset</button>
+            </div>
+
+            <div id="game-board" class="game-board"></div>
+        </div>
+
+        <!-- Statistics Tab -->
+        <div id="statistics-tab" class="tab-content">
+            <div class="statistics-controls">
+                <div class="control-group">
+                    <label for="stats-username">Select User:</label>
+                    <select id="stats-username">
+                        <option value="">-- Select User --</option>
+                    </select>
+                </div>
+                <button id="load-stats-btn" class="btn btn-primary">Load Statistics</button>
+                <button id="delete-account-btn" class="btn btn-danger" style="display: none;">Delete Account</button>
+            </div>
+            
+            <div id="grid-size-filter-controls" class="statistics-controls" style="display: none; margin-top: 15px;">
+                <div class="control-group">
+                    <label for="chart-grid-size">Filter by Grid Size:</label>
+                    <select id="chart-grid-size">
+                        <option value="all">All Grid Sizes</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="download-controls" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">Download History</h3>
+                <div class="control-group" style="display: flex; align-items: center; gap: 10px;">
+                    <label for="download-format">Format:</label>
+                    <select id="download-format">
+                        <option value="csv" selected>CSV</option>
+                        <option value="json">JSON</option>
+                    </select>
+                    <button id="download-btn" class="btn btn-primary">Download History</button>
+                    <span id="download-status" style="margin-left: 10px; color: #28a745; display: none;">✓ Saved to server</span>
+                </div>
+            </div>
+
+            <div id="statistics-content" class="statistics-content">
+                <p class="no-stats-message">Select a user to view statistics</p>
+            </div>
+        </div>
+
+        <!-- Win Modal -->
+        <div id="win-modal" class="modal">
+            <div class="modal-content">
+                <h2>🎉 Congratulations! 🎉</h2>
+                <p>You found all the pairs!</p>
+                <div class="final-stats">
+                    <p><strong>Time:</strong> <span id="final-time"></span></p>
+                    <p><strong>Moves:</strong> <span id="final-moves"></span></p>
+                </div>
+                <button id="restart-btn" class="btn btn-primary">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
