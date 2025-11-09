@@ -571,3 +571,41 @@ _This section will be updated as new feature requests are made._
 - Filters update statistics immediately when changed
 - Cleaner UI with one less button
 
+### 27. Theme Tracking Fixes and Auto-Selection
+**Date**: 2025-11-09  
+**Request**: Fix issues where themes were always being recorded as "Animals" in game history and theme filter. After completing a game, when switching to Statistics tab, the theme filter should default to the theme that was just played.
+
+**Implementation**:
+- **Theme Preservation in `initGame()`**: Added protection to preserve `gameState.theme` if already set
+  - Only sets default theme if `gameState.theme` is not set
+  - Prevents theme from being reset when `initGame()` is called from other places
+- **Theme Validation in `saveGameHistory()`**: Added validation to ensure 'random' is never saved
+  - Converts 'random' or invalid themes to 'animals' before saving
+  - Ensures only valid theme names are stored in history
+- **Enhanced Theme Setting**: Improved theme capture logic in `startBtn` event listener
+  - Validates theme exists in `emojiThemes` object before using
+  - Handles 'random' theme selection correctly by resolving to actual theme
+  - Added comprehensive logging to track theme throughout game lifecycle
+- **Theme Auto-Selection in Statistics**: Added `lastPlayedTheme` variable to track last played theme
+  - Set in `endGame()` when a game completes
+  - Used in `displayStatistics()` to auto-select theme filter
+  - Theme filter defaults to last played theme instead of "All Themes"
+  - Clears `lastPlayedTheme` after using it
+- **Debugging**: Added extensive console logging on both client and server
+  - Client-side logs track theme selection, setting, and saving
+  - Server-side logs track theme received and saved
+  - Helps identify where theme might be lost in the data flow
+
+**Technical Details**:
+- `gameState.theme` is set before `initGame()` is called to ensure it's preserved
+- Theme is validated to ensure it exists in `emojiThemes` object
+- `lastPlayedTheme` follows same pattern as `lastPlayedUsername` and `lastPlayedGridSize`
+- Theme filter auto-selection works in both `displayStatistics()` and tab switching handler
+- Theme merging logic in `getGameHistory()` preserves themes from localStorage when server games don't have them
+
+**Issues Fixed**:
+- Themes were being recorded as "Animals" regardless of actual theme selected
+- Theme filter dropdown only showed "Animals" option
+- Theme filter defaulted to "All Themes" instead of last played theme
+- Theme was not being preserved when `initGame()` was called multiple times
+

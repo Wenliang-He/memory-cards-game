@@ -285,6 +285,7 @@ function toggleEmojiSelection(emoji, gridSize) {
 
 // Function to get random theme
 function getRandomTheme() {
+    const themeKeys = Object.keys(emojiThemes);
     const randomIndex = Math.floor(Math.random() * themeKeys.length);
     return themeKeys[randomIndex];
 }
@@ -419,6 +420,13 @@ const API_BASE_URL = 'http://localhost:3000/api';
 function initGame() {
     const gridSize = parseInt(gridSizeSelect.value);
     gameState.gridSize = gridSize;
+    
+    // Preserve theme - don't reset it if already set
+    // Only reset if gameState.theme is not set
+    if (!gameState.theme) {
+        // If theme not set, use currentTheme or default to 'animals'
+        gameState.theme = currentTheme || 'animals';
+    }
     
     // Clear matched pairs list when game resets
     if (matchedPairsList) {
@@ -723,7 +731,8 @@ async function endGame() {
     // Save game history
     const username = usernameInput.value.trim();
     if (username) {
-        // Use theme from gameState (captured when game started) or currentTheme as fallback
+        // Use theme from gameState (captured when game started) - this is the most reliable
+        // Fallback to currentTheme if gameState.theme is somehow missing
         const themeToSave = gameState.theme || currentTheme || 'animals';
         console.log('Theme to save:', themeToSave);
         console.log('Calling saveGameHistory with theme:', themeToSave);
@@ -734,6 +743,7 @@ async function endGame() {
         // Track last played game info for Statistics tab
         lastPlayedUsername = username;
         lastPlayedGridSize = gameState.gridSize.toString();
+        lastPlayedTheme = themeToSave; // Track the theme that was just played
     }
     
     winModal.classList.add('show');
@@ -743,11 +753,15 @@ async function endGame() {
 async function saveGameHistory(username, time, moves, gridSize, theme = 'animals') {
     console.log('saveGameHistory called with:', { username, time, moves, gridSize, theme });
     
+    // Ensure theme is valid (not 'random' or undefined)
+    const validTheme = (theme && theme !== 'random') ? theme : 'animals';
+    console.log('Validated theme:', validTheme);
+    
     const gameData = {
         time: time,
         moves: moves,
         gridSize: gridSize,
-        theme: theme, // Add theme to game data
+        theme: validTheme, // Use validated theme
         date: new Date().toISOString()
     };
     
@@ -779,7 +793,7 @@ async function saveGameHistory(username, time, moves, gridSize, theme = 'animals
         });
         
         if (response.ok) {
-            console.log('Game history saved to server');
+            console.log('Game history saved to server with theme:', validTheme);
         } else {
             console.error('Failed to save to server:', response.statusText);
         }
@@ -793,30 +807,44 @@ async function getGameHistory(username) {
     // Always use localStorage first (most reliable for case-sensitive usernames)
     const gameHistory = JSON.parse(localStorage.getItem('memoryGameHistory') || '{}');
     const localStorageGames = gameHistory[username] || [];
+    console.log('getGameHistory - localStorageGames:', localStorageGames);
+    console.log('getGameHistory - sample themes from localStorage:', localStorageGames.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
     
     // Try to get from server and merge (but only if username matches exactly)
     try {
         const response = await fetch(`${API_BASE_URL}/get-history/${encodeURIComponent(username)}`);
         if (response.ok) {
             const data = await response.json();
+            console.log('getGameHistory - server response:', data);
             if (data.success && data.games && data.games.length > 0) {
+                console.log('getGameHistory - server games:', data.games);
+                console.log('getGameHistory - sample themes from server:', data.games.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
                 // Merge server games with localStorage games
                 // Use Set to avoid duplicates based on date
                 const gameMap = new Map();
                 
-                // Add localStorage games
+                // Add localStorage games FIRST (they have correct themes)
                 localStorageGames.forEach(game => {
                     const key = `${game.date}_${game.time}_${game.moves}`;
                     gameMap.set(key, game);
                 });
                 
-                // Add server games (they will overwrite if duplicate)
+                // Add server games (they will overwrite if duplicate, but preserve theme from localStorage if server doesn't have it)
                 data.games.forEach(game => {
                     const key = `${game.date}_${game.time}_${game.moves}`;
+                    const existingGame = gameMap.get(key);
+                    if (existingGame) {
+                        // If localStorage game exists, prefer its theme if server game doesn't have one
+                        if (!game.theme && existingGame.theme) {
+                            game.theme = existingGame.theme;
+                        }
+                    }
                     gameMap.set(key, game);
                 });
                 
                 const mergedGames = Array.from(gameMap.values());
+                console.log('getGameHistory - merged games:', mergedGames);
+                console.log('getGameHistory - sample themes from merged:', mergedGames.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
                 
                 // Update localStorage with merged data (using exact username case)
                 gameHistory[username] = mergedGames;
@@ -830,6 +858,7 @@ async function getGameHistory(username) {
     }
     
     // Return localStorage games (always available and case-sensitive)
+    console.log('getGameHistory - returning localStorageGames:', localStorageGames);
     return localStorageGames;
 }
 
@@ -878,9 +907,10 @@ function loadLastGridSize() {
     return localStorage.getItem('memoryGameLastGridSize') || '4';
 }
 
-// Track last played game info for Statistics tab
+// Track last played game info for auto-selection in Statistics tab
 let lastPlayedUsername = null;
 let lastPlayedGridSize = null;
+let lastPlayedTheme = null;
 
 // Tab Switching
 tabButtons.forEach(btn => {
@@ -942,7 +972,7 @@ tabButtons.forEach(btn => {
                     // Automatically load statistics for the selected user
                     await displayStatistics(usernameToSelect);
                     
-                    // If user just played a game, also set grid size filter
+                    // If user just played a game, also set grid size filter and theme filter
                     if (lastPlayedGridSize) {
                         const gridSizeOption = chartGridSizeSelect.querySelector(`option[value="${lastPlayedGridSize}"]`);
                         if (gridSizeOption) {
@@ -950,6 +980,16 @@ tabButtons.forEach(btn => {
                             updateStatisticsDisplay();
                         }
                         lastPlayedGridSize = null; // Clear after using
+                    }
+                    
+                    // Set theme filter to last played theme
+                    if (lastPlayedTheme) {
+                        const themeOption = chartThemeSelect.querySelector(`option[value="${lastPlayedTheme}"]`);
+                        if (themeOption) {
+                            chartThemeSelect.value = lastPlayedTheme;
+                            updateStatisticsDisplay();
+                        }
+                        lastPlayedTheme = null; // Clear after using
                     }
                 } else {
                     // Username not found, just show empty state
@@ -1070,11 +1110,15 @@ function filterGamesByTheme(games, theme) {
 // Get all unique themes from games
 function getUniqueThemes(games) {
     const themes = new Set();
+    console.log('getUniqueThemes called with games:', games);
     games.forEach(game => {
         const theme = game.theme || 'animals'; // Default to animals for old records
+        console.log('Game theme:', theme, 'for game:', game);
         themes.add(theme);
     });
-    return Array.from(themes).sort();
+    const uniqueThemes = Array.from(themes).sort();
+    console.log('Unique themes found:', uniqueThemes);
+    return uniqueThemes;
 }
 
 // Helper function to get theme display name (plain text, no emojis)
@@ -1215,6 +1259,9 @@ function updateStatisticsDisplay() {
 // Display Statistics (initial load)
 async function displayStatistics(username, preserveSelection = false) {
     const allGames = await getGameHistory(username);
+    console.log('displayStatistics - allGames retrieved:', allGames);
+    console.log('displayStatistics - sample game themes:', allGames.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
+    
     currentUserGames = allGames; // Store for quick filtering
     
     // Show download controls if user has games
@@ -1225,6 +1272,13 @@ async function displayStatistics(username, preserveSelection = false) {
         // Preserve current selection if user has manually selected something
         const currentGridSelection = preserveSelection ? chartGridSizeSelect.value : null;
         const currentThemeSelection = preserveSelection ? chartThemeSelect.value : null;
+        
+        // Only use lastPlayedTheme if the username matches lastPlayedUsername
+        // This prevents applying a theme from a different user's game
+        let themeToSelect = currentThemeSelection;
+        if (!themeToSelect && lastPlayedTheme && lastPlayedUsername === username) {
+            themeToSelect = lastPlayedTheme;
+        }
         
         // Populate grid size filter
         const uniqueSizes = getUniqueGridSizes(allGames);
@@ -1258,10 +1312,12 @@ async function displayStatistics(username, preserveSelection = false) {
             }
         }
         
-        // Restore theme selection if it was valid
-        if (currentThemeSelection && chartThemeSelect.querySelector(`option[value="${currentThemeSelection}"]`)) {
-            chartThemeSelect.value = currentThemeSelection;
+        // Restore theme selection if it was valid, or use last played theme
+        if (themeToSelect && chartThemeSelect.querySelector(`option[value="${themeToSelect}"]`)) {
+            chartThemeSelect.value = themeToSelect;
+            // Don't clear lastPlayedTheme here - let tab switching code handle it for consistency
         }
+        // Note: If neither preserved selection nor last played theme is available, it stays as "all"
     } else {
         downloadControls.style.display = 'none';
         gridSizeFilterControls.style.display = 'none';
@@ -1365,6 +1421,12 @@ chartThemeSelect.addEventListener('change', () => {
 statsUsernameSelect.addEventListener('change', async () => {
     const username = statsUsernameSelect.value.trim();
     if (username) {
+        // Clear lastPlayedTheme if selecting a different user
+        // This prevents applying theme from a previous user's game
+        if (lastPlayedUsername && lastPlayedUsername !== username) {
+            lastPlayedTheme = null;
+        }
+        
         // Show delete button when user is selected
         deleteAccountBtn.style.display = 'inline-block';
         // Automatically load statistics when user is selected
@@ -1577,30 +1639,44 @@ startBtn.addEventListener('click', () => {
     // IMPORTANT: Set theme FIRST, before calling initGame()
     // Always get fresh value from selector to ensure we have the latest theme
     const selectedTheme = emojiThemeSelect ? emojiThemeSelect.value : 'animals';
+    console.log('=== START GAME CLICKED ===');
+    console.log('emojiThemeSelect element:', emojiThemeSelect);
+    console.log('emojiThemeSelect.value:', selectedTheme);
+    
     let themeToUse;
     
     if (selectedTheme === 'random') {
         // If random, pick a random theme for this game
         themeToUse = getRandomTheme();
+        console.log('Random theme selected, picked:', themeToUse);
     } else {
         // Use the selected theme directly
         themeToUse = selectedTheme || 'animals';
+        console.log('Direct theme selected:', themeToUse);
+    }
+    
+    // Validate theme exists in emojiThemes
+    if (!emojiThemes[themeToUse]) {
+        console.error('Invalid theme:', themeToUse, 'defaulting to animals');
+        themeToUse = 'animals';
     }
     
     // Update both currentTheme and gameState.theme BEFORE initGame()
     currentTheme = themeToUse;
     currentEmojis = emojiThemes[themeToUse];
-    gameState.theme = themeToUse;
+    gameState.theme = themeToUse; // CRITICAL: Set theme before initGame()
     
     console.log('=== GAME START ===');
     console.log('Selector value:', selectedTheme);
     console.log('Theme to use:', themeToUse);
     console.log('gameState.theme set to:', gameState.theme);
+    console.log('currentTheme set to:', currentTheme);
     
     initGame();
     
     // Verify theme is still correct after initGame()
     console.log('After initGame(), gameState.theme:', gameState.theme);
+    console.log('After initGame(), currentTheme:', currentTheme);
     
     gameState.isGameStarted = true;
     gameState.isPaused = false;

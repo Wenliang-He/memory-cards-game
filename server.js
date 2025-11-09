@@ -68,6 +68,10 @@ app.post('/api/save-history', (req, res) => {
     try {
         const { username, time, moves, gridSize, theme, date } = req.body;
         
+        console.log('=== SERVER: Save History Request ===');
+        console.log('Received theme:', theme);
+        console.log('Full request body:', req.body);
+        
         if (!username) {
             return res.status(400).json({ error: 'Username is required' });
         }
@@ -100,10 +104,14 @@ app.post('/api/save-history', (req, res) => {
         }
 
         // Add new game (set default theme to 'animals' if not provided)
-        fileData.games.push({ time, moves, gridSize, theme: theme || 'animals', date });
+        const gameToAdd = { time, moves, gridSize, theme: theme || 'animals', date };
+        console.log('Game to add:', gameToAdd);
+        fileData.games.push(gameToAdd);
 
         // Save JSON file with original username stored
         fs.writeFileSync(jsonFile, JSON.stringify(fileData, null, 2), 'utf8');
+        console.log('Saved to file:', jsonFile);
+        console.log('Last game in file:', fileData.games[fileData.games.length - 1]);
 
         // Save CSV file
         const csvHeader = 'Date,Time (seconds),Moves,Grid Size,Theme\n';
