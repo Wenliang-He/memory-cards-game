@@ -96,8 +96,13 @@
                 <button id="reset-btn" class="btn btn-secondary" style="display: none;">Reset</button>
             </div>
 
-            <div id="matched-pair-display" class="matched-pair-display" style="text-align: center; margin-bottom: 15px; padding: 10px; background: #e8f5e9; border-radius: 8px; font-size: 1.2em; color: #2e7d32; font-weight: bold;">Pairs to be found</div>
-            <div id="game-board" class="game-board"></div>
+            <div style="display: flex; gap: 20px; align-items: flex-start;">
+                <div id="game-board" class="game-board"></div>
+                <div id="matched-pair-display" class="matched-pair-display" style="flex: 0 0 250px; padding: 15px; background: #e8f5e9; border-radius: 8px; font-size: 1em; color: #2e7d32; font-weight: bold; min-height: 200px;">
+                    <div style="font-size: 1.1em; margin-bottom: 10px; border-bottom: 2px solid #4caf50; padding-bottom: 5px;">Pairs to be found</div>
+                    <div id="matched-pairs-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Statistics Tab -->
@@ -109,7 +114,6 @@
                         <option value="">-- Select User --</option>
                     </select>
                 </div>
-                <button id="load-stats-btn" class="btn btn-primary">Load Statistics</button>
                 <button id="delete-account-btn" class="btn btn-danger" style="display: none;">Delete Account</button>
             </div>
             
@@ -155,7 +159,10 @@
                     <p><strong>Time:</strong> <span id="final-time"></span></p>
                     <p><strong>Moves:</strong> <span id="final-moves"></span></p>
                 </div>
-                <button id="restart-btn" class="btn btn-primary">Play Again</button>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="review-result-btn" class="btn btn-secondary" style="flex: 1; max-width: 200px;">Review</button>
+                    <button id="restart-btn" class="btn btn-primary" style="flex: 1; max-width: 200px;">Play Again</button>
+                </div>
             </div>
         </div>
     </div>

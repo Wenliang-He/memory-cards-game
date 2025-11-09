@@ -52,6 +52,9 @@ body {
     font-size: 1em;
     font-weight: bold;
     transition: all 0.3s ease;
+    flex: 1;
+    max-width: 200px;
+    text-align: center;
 }
 
 .tab-btn:hover {
@@ -153,7 +156,7 @@ body {
     background: #f0f0f0;
     border-radius: 8px;
     transition: transform 0.2s, background 0.2s;
-    cursor: default;
+    cursor: pointer;
 }
 
 .preview-emoji:hover {
@@ -601,5 +604,30 @@ body {
     .charts-container {
         grid-template-columns: 1fr;
     }
+}
+
+/* Matched pairs display */
+.matched-pair-item {
+    transition: all 0.2s ease;
+}
+
+.matched-pair-item:hover {
+    background: #f1f8f4 !important;
+    transform: translateX(3px);
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+}
+
+.matched-pair-item:hover .emoji-name-display {
+    color: #1b5e20;
+    font-weight: 600;
+}
+
+.matched-pair-item input {
+    outline: none;
+}
+
+.matched-pair-item input:focus {
+    border-color: #2e7d32 !important;
+    box-shadow: 0 0 5px rgba(46, 125, 50, 0.3);
 }
 

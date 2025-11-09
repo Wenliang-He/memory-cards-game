@@ -167,12 +167,121 @@ const emojiNames = {
 };
 
 // Function to get emoji name
+// Custom emoji names storage (user-defined overrides)
+let customEmojiNames = {};
+
+// Load custom emoji names from localStorage
+function loadCustomEmojiNames() {
+    const saved = localStorage.getItem('memoryGameCustomEmojiNames');
+    if (saved) {
+        try {
+            customEmojiNames = JSON.parse(saved);
+        } catch (e) {
+            customEmojiNames = {};
+        }
+    }
+}
+
+// Save custom emoji names to localStorage
+function saveCustomEmojiNames() {
+    localStorage.setItem('memoryGameCustomEmojiNames', JSON.stringify(customEmojiNames));
+}
+
+// Get emoji name (checks custom names first, then defaults)
 function getEmojiName(emoji) {
+    if (customEmojiNames[emoji]) {
+        return customEmojiNames[emoji];
+    }
     return emojiNames[emoji] || 'Unknown';
 }
 
-// Get all theme keys (excluding 'random')
-const themeKeys = Object.keys(emojiThemes);
+// Set custom emoji name
+function setCustomEmojiName(emoji, customName) {
+    if (customName && customName.trim()) {
+        customEmojiNames[emoji] = customName.trim();
+    } else {
+        delete customEmojiNames[emoji];
+    }
+    saveCustomEmojiNames();
+}
+
+// Edit emoji name in the matched pairs list
+function editEmojiName(matchItem, emoji) {
+    const nameSpan = matchItem.querySelector('.emoji-name-display');
+    const currentName = nameSpan.textContent;
+    
+    // Create input field
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentName;
+    input.style.cssText = 'flex: 1; padding: 2px 5px; border: 2px solid #4caf50; border-radius: 3px; font-size: inherit;';
+    input.maxLength = 50;
+    
+    // Replace name span with input
+    const parent = nameSpan.parentNode;
+    parent.replaceChild(input, nameSpan);
+    input.focus();
+    input.select();
+    
+    // Save on Enter or blur
+    const saveName = () => {
+        const newName = input.value.trim();
+        if (newName) {
+            setCustomEmojiName(emoji, newName);
+            nameSpan.textContent = newName;
+        } else {
+            // If empty, revert to default name
+            const defaultName = emojiNames[emoji] || 'Unknown';
+            setCustomEmojiName(emoji, ''); // Clear custom name
+            nameSpan.textContent = defaultName;
+        }
+        parent.replaceChild(nameSpan, input);
+    };
+    
+    input.addEventListener('blur', saveName);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            input.blur();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            nameSpan.textContent = currentName; // Revert to original
+            parent.replaceChild(nameSpan, input);
+        }
+    });
+}
+
+// Toggle emoji selection in preview
+function toggleEmojiSelection(emoji, gridSize) {
+    const key = `${gridSize}_${currentTheme}`;
+    
+    // Initialize if doesn't exist
+    if (!selectedEmojisByGridSize[key]) {
+        selectedEmojisByGridSize[key] = [];
+    }
+    
+    const selectedEmojis = selectedEmojisByGridSize[key];
+    const index = selectedEmojis.indexOf(emoji);
+    
+    if (index > -1) {
+        // Deselect: remove from array
+        selectedEmojis.splice(index, 1);
+    } else {
+        // Select: add to array (but check if we have space)
+        const totalCards = gridSize * gridSize;
+        const numPairs = Math.floor(totalCards / 2);
+        
+        if (selectedEmojis.length < numPairs) {
+            selectedEmojis.push(emoji);
+        }
+    }
+    
+    // Save the updated selection
+    saveSelectedEmojis();
+    
+    // Update preview to reflect changes
+    updateEmojiPreview();
+}
 
 // Function to get random theme
 function getRandomTheme() {
@@ -221,17 +330,31 @@ function saveSelectedEmojis() {
 // Get selected emojis for a grid size (or generate new ones if not exists)
 function getSelectedEmojisForGridSize(gridSize, themeEmojis) {
     const key = `${gridSize}_${currentTheme}`;
+    const totalCards = gridSize * gridSize;
+    const numPairs = Math.floor(totalCards / 2);
+    
+    let selectedEmojis = [];
     
     // If we have saved emojis for this grid size and theme, use them
     if (selectedEmojisByGridSize[key] && selectedEmojisByGridSize[key].length > 0) {
-        return selectedEmojisByGridSize[key];
+        selectedEmojis = [...selectedEmojisByGridSize[key]];
     }
     
-    // Otherwise, generate new random selection and save it
-    const newSelection = generateRandomEmojiSelection(gridSize, themeEmojis);
-    selectedEmojisByGridSize[key] = newSelection;
-    saveSelectedEmojis();
-    return newSelection;
+    // If not enough emojis selected, auto-fill with random selections
+    if (selectedEmojis.length < numPairs) {
+        const needed = numPairs - selectedEmojis.length;
+        const availableEmojis = themeEmojis.filter(emoji => !selectedEmojis.includes(emoji));
+        const shuffled = [...availableEmojis].sort(() => Math.random() - 0.5);
+        const additionalEmojis = shuffled.slice(0, needed);
+        selectedEmojis = [...selectedEmojis, ...additionalEmojis];
+        
+        // Save the auto-filled selection
+        selectedEmojisByGridSize[key] = selectedEmojis;
+        saveSelectedEmojis();
+    }
+    
+    // Ensure we don't exceed the required number
+    return selectedEmojis.slice(0, numPairs);
 }
 
 // Generate random emoji selection for a grid size
@@ -255,6 +378,7 @@ function saveEmojiSelectionForCurrentGridSize(emojis) {
 // DOM elements
 const gameBoard = document.getElementById('game-board');
 const matchedPairDisplay = document.getElementById('matched-pair-display');
+const matchedPairsList = document.getElementById('matched-pairs-list');
 const timerDisplay = document.getElementById('timer');
 const movesDisplay = document.getElementById('moves');
 const gridSizeSelect = document.getElementById('grid-size');
@@ -271,12 +395,12 @@ const emojiCount = document.getElementById('emoji-count');
 const finalTimeDisplay = document.getElementById('final-time');
 const finalMovesDisplay = document.getElementById('final-moves');
 const restartBtn = document.getElementById('restart-btn');
+const reviewResultBtn = document.getElementById('review-result-btn');
 const pauseBtn = document.getElementById('pause-btn');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const gameTab = document.getElementById('game-tab');
 const statisticsTab = document.getElementById('statistics-tab');
 const statsUsernameSelect = document.getElementById('stats-username');
-const loadStatsBtn = document.getElementById('load-stats-btn');
 const statisticsContent = document.getElementById('statistics-content');
 const usernameError = document.getElementById('username-error');
 const downloadControls = document.querySelector('.download-controls');
@@ -296,10 +420,9 @@ function initGame() {
     const gridSize = parseInt(gridSizeSelect.value);
     gameState.gridSize = gridSize;
     
-    // Set default message for matched pair display
-    if (matchedPairDisplay) {
-        matchedPairDisplay.textContent = 'Pairs to be found';
-        matchedPairDisplay.style.display = 'block';
+    // Clear matched pairs list when game resets
+    if (matchedPairsList) {
+        matchedPairsList.innerHTML = '';
     }
     
     // For memory card game, we need an even number of cards (pairs)
@@ -490,10 +613,39 @@ function checkMatch() {
         secondCard.isFlipped = true; // Ensure they stay flipped
         gameState.matchedPairs++;
         
-        // Display matched emoji name above game board (stays visible)
+        // Add matched emoji to the list (append, don't replace)
         const emojiName = getEmojiName(firstCard.emoji);
-        matchedPairDisplay.textContent = `Match Found: ${firstCard.emoji} ${emojiName}`;
-        matchedPairDisplay.style.display = 'block';
+        if (matchedPairsList) {
+            const matchItem = document.createElement('div');
+            matchItem.className = 'matched-pair-item';
+            matchItem.style.cssText = 'padding: 5px 10px; background: white; border-radius: 5px; border-left: 3px solid #4caf50; cursor: pointer; display: flex; align-items: center; gap: 8px;';
+            matchItem.dataset.emoji = firstCard.emoji;
+            
+            const emojiSpan = document.createElement('span');
+            emojiSpan.textContent = firstCard.emoji;
+            emojiSpan.style.cssText = 'font-size: 1.2em;';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'emoji-name-display';
+            nameSpan.textContent = emojiName;
+            nameSpan.style.cssText = 'flex: 1;';
+            
+            const editIcon = document.createElement('span');
+            editIcon.textContent = '✏️';
+            editIcon.style.cssText = 'font-size: 0.8em; opacity: 0.6; margin-left: auto;';
+            editIcon.title = 'Click to edit name';
+            
+            matchItem.appendChild(emojiSpan);
+            matchItem.appendChild(nameSpan);
+            matchItem.appendChild(editIcon);
+            
+            // Make it editable
+            matchItem.addEventListener('click', () => {
+                editEmojiName(matchItem, firstCard.emoji);
+            });
+            
+            matchedPairsList.appendChild(matchItem);
+        }
         
         // Check win condition
         if (gameState.matchedPairs === gameState.totalPairs) {
@@ -1193,50 +1345,6 @@ function createMovesChart(games) {
     });
 }
 
-// Load Statistics Event Listener
-loadStatsBtn.addEventListener('click', async () => {
-    // Preserve selected username and filter selections before refreshing
-    const selectedUsername = statsUsernameSelect.value.trim();
-    const selectedGridSize = chartGridSizeSelect.value;
-    const selectedTheme = chartThemeSelect.value;
-    
-    // Refresh username list before loading statistics
-    await updateStatsUsernameList();
-    
-    // Restore username selection if it was valid
-    if (selectedUsername) {
-        // Check if the username still exists in the list
-        const option = statsUsernameSelect.querySelector(`option[value="${selectedUsername}"]`);
-        if (option) {
-            statsUsernameSelect.value = selectedUsername;
-        }
-    }
-    
-    // Get the username (either restored or newly selected)
-    const username = statsUsernameSelect.value.trim();
-    if (username) {
-        // Load statistics and preserve filter selections
-        await displayStatistics(username, true);
-        
-        // Restore grid size filter selection after loading
-        if (selectedGridSize && chartGridSizeSelect.querySelector(`option[value="${selectedGridSize}"]`)) {
-            chartGridSizeSelect.value = selectedGridSize;
-        }
-        
-        // Restore theme filter selection after loading
-        if (selectedTheme && chartThemeSelect.querySelector(`option[value="${selectedTheme}"]`)) {
-            chartThemeSelect.value = selectedTheme;
-        }
-        
-        // Update display with the selected filters
-        updateStatisticsDisplay();
-    } else {
-        statisticsContent.innerHTML = '<p class="no-stats-message">Please select a user</p>';
-        downloadControls.style.display = 'none';
-        gridSizeFilterControls.style.display = 'none';
-    }
-});
-
 // Grid size filter change event listener - immediate update
 chartGridSizeSelect.addEventListener('change', () => {
     // Update statistics and charts immediately without reloading data
@@ -1534,7 +1642,7 @@ restartBtn.addEventListener('click', () => {
     gameState.isGameStarted = false;
     gameState.isPaused = false;
     
-    // Initialize game (this will also stop timer and reset state)
+    // Initialize game (this will also stop timer and reset state, including clearing matched pairs list)
     initGame();
     
     // Don't auto-start - let user click Start Game button
@@ -1542,10 +1650,22 @@ restartBtn.addEventListener('click', () => {
     resetBtn.style.display = 'none';
     // Keep grid size selector enabled
     usernameInput.disabled = false;
+    usernameError.style.display = 'none';
+    usernameInput.style.borderColor = '#667eea';
     pauseBtn.style.display = 'none';
     
     // Update display to show 00:00
     updateDisplay();
+});
+
+// Review Result button event listener
+reviewResultBtn.addEventListener('click', () => {
+    // Just close the modal, keep everything else (game state, matched pairs list, etc.)
+    winModal.classList.remove('show');
+    
+    // Keep the game board visible with all matched pairs
+    // Keep the matched pairs list visible
+    // Don't reset anything - user can review the results
 });
 
 // Grid size change event listener - allow users to change grid size anytime
@@ -1612,8 +1732,9 @@ function updateEmojiPreview() {
     const totalCards = gridSize * gridSize;
     const numPairs = Math.floor(totalCards / 2);
     
-    // Get selected emojis for this grid size and theme
-    const selectedEmojis = getSelectedEmojisForGridSize(gridSize, currentEmojis);
+    // Get current selection directly (don't auto-fill here, just show what's selected)
+    const key = `${gridSize}_${currentTheme}`;
+    const currentSelection = selectedEmojisByGridSize[key] || [];
     
     // Display preview of all emojis with selected ones highlighted
     emojiPreview.innerHTML = '';
@@ -1624,13 +1745,19 @@ function updateEmojiPreview() {
         
         // Set tooltip with emoji name
         const emojiName = getEmojiName(emoji);
-        emojiSpan.title = emojiName;
         
         // Highlight if this emoji is selected for current grid size
-        if (selectedEmojis.includes(emoji)) {
+        if (currentSelection.includes(emoji)) {
             emojiSpan.classList.add('selected-emoji');
-            emojiSpan.title = `${emojiName} (Selected)`;
+            emojiSpan.title = `${emojiName} (Selected - Click to deselect)`;
+        } else {
+            emojiSpan.title = `${emojiName} (Click to select)`;
         }
+        
+        // Add click handler to toggle selection
+        emojiSpan.addEventListener('click', () => {
+            toggleEmojiSelection(emoji, gridSize);
+        });
         
         emojiPreview.appendChild(emojiSpan);
     });
@@ -1683,6 +1810,8 @@ if (randomSelectionBtn) {
 function initializeThemeSelector() {
     // Load selected emojis from localStorage
     loadSelectedEmojis();
+    // Load custom emoji names from localStorage
+    loadCustomEmojiNames();
     
     const savedTheme = loadSavedTheme();
     emojiThemeSelect.value = savedTheme;

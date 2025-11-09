@@ -442,3 +442,132 @@ _This section will be updated as new feature requests are made._
 - Removed inline `margin-left` style from grid size label
 - Both labels now have identical styling and alignment
 
+### 22. Matched Pairs Display Layout and List Functionality
+**Date**: 2025-11-09  
+**Request**: Move matched pairs display to the right of the game board. Display matched pairs as a list that accumulates (doesn't replace previous matches). Allow users to review results after game completion.
+
+**Implementation**:
+- **Layout Change**: Restructured HTML to use flexbox layout
+  - Game board on the left, matched pairs display on the right
+  - Matched pairs display has fixed width (250px) with flex: 0 0 250px
+  - Responsive layout maintains side-by-side arrangement
+- **List Display**: Changed from single message to accumulating list
+  - Added `<div id="matched-pairs-list">` container for list items
+  - Each matched pair added as a new list item (doesn't replace previous)
+  - List items styled with white background, green left border, padding
+  - Header "Pairs to be found" with border separator
+  - List displays vertically from top to bottom
+- **Review Result Button**: Added "Review" button next to "Play Again" in win modal
+  - "Review" button closes modal but keeps game state and matched pairs list visible
+  - "Play Again" button clears everything and resets game
+  - Both buttons styled with equal width (flex: 1, max-width: 200px)
+  - Buttons arranged side-by-side with flexbox
+- **Initialization**: List clears when new game starts
+  - `initGame()` clears matched pairs list
+  - Default message "Pairs to be found" shown before game starts
+
+**Technical Details**:
+- Flexbox container wraps game board and matched pairs display
+- Each matched pair item created dynamically with `createElement('div')`
+- Items appended to list using `appendChild()` (no replacement)
+- CSS styling for list items includes hover effects and transitions
+
+### 23. Editable Emoji Names in Matched Pairs List
+**Date**: 2025-11-09  
+**Request**: Allow users to click on matched emoji names in the list to edit/rename them if they believe the name is inappropriate.
+
+**Implementation**:
+- **Custom Name Storage**: Added `customEmojiNames` object to store user-defined names
+  - Stored in localStorage with key `memoryGameCustomEmojiNames`
+  - Persists across sessions
+  - Custom names override default names when set
+- **Editable List Items**: Each matched pair item is clickable
+  - Clicking an item converts the name to an editable input field
+  - Input field has green border and focus styling
+  - Press Enter to save, Escape to cancel
+  - If name is cleared, reverts to default name
+- **Name Display**: Updated `getEmojiName()` function
+  - Checks custom names first, then falls back to default names
+  - Custom names take precedence over default names
+- **Visual Feedback**: Added edit icon (✏️) to each list item
+  - Tooltip indicates "Click to edit name"
+  - Hover effects show items are clickable
+  - CSS transitions for smooth interactions
+
+**Technical Details**:
+- `setCustomEmojiName()` function saves custom names to localStorage
+- `loadCustomEmojiNames()` loads custom names on page initialization
+- `editEmojiName()` function handles inline editing with input field replacement
+- Custom names stored as `{ emoji: "customName" }` object in localStorage
+- Editing updates both the display and localStorage immediately
+
+### 24. Manual Emoji Selection in Settings Panel
+**Date**: 2025-11-09  
+**Request**: Allow users to manually select/deselect emojis in Settings panel by clicking on them. If user doesn't select enough emojis, auto-fill remaining slots when starting game.
+
+**Implementation**:
+- **Click-to-Select**: Added click handlers to all emojis in preview grid
+  - Clicking a selected emoji deselects it
+  - Clicking an unselected emoji selects it (up to required number)
+  - Selection state saved to localStorage immediately
+  - Visual feedback shows selected state with green highlighting
+- **Auto-Fill Logic**: Updated `getSelectedEmojisForGridSize()` function
+  - If fewer emojis selected than needed, auto-fills remaining slots randomly
+  - Auto-fill only occurs when starting a game (not in preview)
+  - No error messages - silently fills missing slots
+  - Uses available emojis from theme (excludes already selected ones)
+- **Visual Indicators**: Enhanced tooltips and cursor
+  - Tooltips show "(Selected - Click to deselect)" or "(Click to select)"
+  - Cursor changes to pointer on hover
+  - Selected emojis highlighted with green background and border
+- **Selection Management**: Added `toggleEmojiSelection()` function
+  - Handles selection/deselection logic
+  - Prevents selecting more than required number
+  - Updates preview immediately after selection change
+  - Saves selection to localStorage automatically
+
+**Technical Details**:
+- Selection stored per grid-size+theme combination (same as before)
+- `updateEmojiPreview()` shows current selection state without auto-filling
+- Preview displays all emojis with selected ones highlighted
+- Selection persists across sessions and theme changes
+- Auto-fill happens in `getSelectedEmojisForGridSize()` when game starts
+
+### 25. Tab Buttons Equal Width
+**Date**: 2025-11-09  
+**Request**: Make Settings, Game, and Statistics tab buttons the same width for aesthetic purposes.
+
+**Implementation**:
+- Updated `.tab-btn` CSS class
+  - Added `flex: 1` to make buttons take equal space
+  - Added `max-width: 200px` to prevent buttons from getting too wide
+  - Added `text-align: center` to center text within buttons
+  - Buttons now have consistent width and alignment
+
+**Technical Details**:
+- Flexbox container (`.tabs`) distributes space equally among buttons
+- Max-width ensures buttons don't stretch excessively on large screens
+- All three buttons (Settings, Game, Statistics) have identical width
+
+### 26. Remove Load Statistics Button
+**Date**: 2025-11-09  
+**Request**: Remove "Load Statistics" button if it's redundant since statistics update automatically based on username, grid-size, and theme selections.
+
+**Implementation**:
+- **Removed Button**: Deleted `<button id="load-stats-btn">` from HTML
+- **Removed Event Listener**: Deleted entire event listener for loadStatsBtn
+- **Removed DOM Reference**: Removed `const loadStatsBtn = document.getElementById('load-stats-btn');`
+
+**Rationale**:
+- Statistics automatically load when username is selected (via `statsUsernameSelect` change event)
+- Grid size filter updates statistics immediately (via `chartGridSizeSelect` change event)
+- Theme filter updates statistics immediately (via `chartThemeSelect` change event)
+- Button was redundant and added unnecessary UI clutter
+- All functionality preserved through automatic event listeners
+
+**Technical Details**:
+- No functionality lost - all features work automatically
+- Statistics load when username dropdown changes
+- Filters update statistics immediately when changed
+- Cleaner UI with one less button
+
