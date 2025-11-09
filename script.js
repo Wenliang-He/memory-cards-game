@@ -10,17 +10,197 @@ const gameState = {
     isGameStarted: false,
     isProcessing: false,
     isPaused: false,
-    gridSize: 4  // Default 4x4
+    gridSize: 4,  // Default 4x4
+    theme: 'animals'  // Track theme used for current game
 };
 
-// Emoji pool for cards
-const emojis = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', 
-                '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆',
-                '⭐', '🌟', '💫', '✨', '🎈', '🎉', '🎊', '🎁', '🎀', '🎂',
-                '🍎', '🍌', '🍇', '🍓', '🍒', '🍑', '🍊', '🍋', '🍉', '🍐'];
+// Emoji themes - each theme has 40+ emojis for maximum grid size (9x9 = 40 pairs)
+const emojiThemes = {
+    animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', 
+              '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆',
+              '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋',
+              '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎',
+              '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳'],
+    
+    food: ['🍎', '🍌', '🍇', '🍓', '🍒', '🍑', '🍊', '🍋', '🍉', '🍐',
+            '🍏', '🍈', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦',
+            '🥬', '🥒', '🌶️', '🌽', '🥕', '🥔', '🍠', '🥐', '🥯', '🍞',
+            '🥖', '🥨', '🧀', '🥚', '🍳', '🥞', '🥓', '🥩', '🍗', '🍖',
+            '🍕', '🌮', '🌯', '🥙', '🥪', '🌭', '🍔', '🍟', '🍿', '🧂'],
+    
+    nature: ['🌳', '🌲', '🌴', '🌵', '🌱', '🌿', '☘️', '🍀', '🍃', '🍂',
+              '🍁', '🍄', '🌾', '🌷', '🌹', '🥀', '🌺', '🌸', '🌼', '🌻',
+              '🌞', '🌝', '🌛', '🌜', '🌚', '🌕', '🌖', '🌗', '🌘', '🌑',
+              '🌒', '🌓', '🌔', '🌙', '⭐', '🌟', '💫', '✨', '⚡', '☄️',
+              '💥', '🔥', '🌈', '☀️', '⛅', '☁️', '⛈️', '🌤️', '🌦️', '🌧️'],
+    
+    sports: ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸',
+              '🥅', '🏒', '🏑', '🏏', '⛳', '🏹', '🎣', '🥊', '🥋', '🎽',
+              '🛹', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🏋️', '🤼', '🤸',
+              '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🚣', '🧗',
+              '🚵', '🚴', '🏃', '🚶', '🏃‍♀️', '🚶‍♀️', '🧍', '🧎', '🏃‍♂️', '🚶‍♂️'],
+    
+    objects: ['📦', '📱', '💻', '⌚', '🖥️', '🖨️', '⌨️', '🖱️', '🖲️', '🕹️',
+               '🗜️', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️',
+               '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️',
+               '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡',
+               '🔦', '🕯️', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰'],
+    
+    faces: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
+             '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '☺️', '😚',
+             '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫',
+             '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬',
+             '😮', '🤤', '😴', '😪', '😵', '🤢', '🤮', '🤧', '😷', '🤒'],
+    
+    vehicles: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐',
+                '🚚', '🚛', '🚜', '🛴', '🚲', '🛵', '🏍️', '🛺', '🚨', '🚔',
+                '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝',
+                '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫',
+                '🛬', '🛩️', '💺', '🚁', '🚀', '🛸', '🚤', '🛥️', '⛵', '🚢'],
+    
+    symbols: ['⭐', '🌟', '💫', '✨', '⚡', '☄️', '💥', '🔥', '🌈', '☀️',
+               '⛅', '☁️', '⛈️', '🌤️', '🌦️', '🌧️', '🌩️', '❄️', '☃️',
+               '⛄', '🌨️', '💧', '☔', '☂️', '🌊', '🌫️', '💨', '🌪️', '🌬️',
+               '🎈', '🎉', '🎊', '🎁', '🎀', '🎂', '🎃', '🎄', '🎅', '🤶',
+               '🎆', '🎇', '🧨', '🎗️', '🎟️', '🎫', '🎖️', '🏆', '🏅', '🥇']
+};
+
+// Emoji name mapping - maps each emoji to its descriptive name
+const emojiNames = {
+    // Animals
+    '🐶': 'Dog', '🐱': 'Cat', '🐭': 'Mouse', '🐹': 'Hamster', '🐰': 'Rabbit',
+    '🦊': 'Fox', '🐻': 'Bear', '🐼': 'Panda', '🐨': 'Koala', '🐯': 'Tiger',
+    '🦁': 'Lion', '🐮': 'Cow', '🐷': 'Pig', '🐸': 'Frog', '🐵': 'Monkey',
+    '🐔': 'Chicken', '🐧': 'Penguin', '🐦': 'Bird', '🐤': 'Baby Chick', '🦆': 'Duck',
+    '🦅': 'Eagle', '🦉': 'Owl', '🦇': 'Bat', '🐺': 'Wolf', '🐗': 'Boar',
+    '🐴': 'Horse', '🦄': 'Unicorn', '🐝': 'Bee', '🐛': 'Bug', '🦋': 'Butterfly',
+    '🐌': 'Snail', '🐞': 'Ladybug', '🐜': 'Ant', '🦟': 'Mosquito', '🦗': 'Cricket',
+    '🕷️': 'Spider', '🦂': 'Scorpion', '🐢': 'Turtle', '🐍': 'Snake', '🦎': 'Lizard',
+    '🐙': 'Octopus', '🦑': 'Squid', '🦐': 'Shrimp', '🦞': 'Lobster', '🦀': 'Crab',
+    '🐡': 'Blowfish', '🐠': 'Tropical Fish', '🐟': 'Fish', '🐬': 'Dolphin', '🐳': 'Whale',
+    
+    // Food & Drinks
+    '🍎': 'Red Apple', '🍌': 'Banana', '🍇': 'Grapes', '🍓': 'Strawberry', '🍒': 'Cherries',
+    '🍑': 'Peach', '🍊': 'Orange', '🍋': 'Lemon', '🍉': 'Watermelon', '🍐': 'Pear',
+    '🍏': 'Green Apple', '🍈': 'Melon', '🥭': 'Mango', '🍍': 'Pineapple', '🥥': 'Coconut',
+    '🥝': 'Kiwi', '🍅': 'Tomato', '🍆': 'Eggplant', '🥑': 'Avocado', '🥦': 'Broccoli',
+    '🥬': 'Leafy Greens', '🥒': 'Cucumber', '🌶️': 'Hot Pepper', '🌽': 'Corn', '🥕': 'Carrot',
+    '🥔': 'Potato', '🍠': 'Sweet Potato', '🥐': 'Croissant', '🥯': 'Bagel', '🍞': 'Bread',
+    '🥖': 'Baguette', '🥨': 'Pretzel', '🧀': 'Cheese', '🥚': 'Egg', '🍳': 'Fried Egg',
+    '🥞': 'Pancakes', '🥓': 'Bacon', '🥩': 'Meat', '🍗': 'Poultry Leg', '🍖': 'Meat on Bone',
+    '🍕': 'Pizza', '🌮': 'Taco', '🌯': 'Burrito', '🥙': 'Stuffed Flatbread', '🥪': 'Sandwich',
+    '🌭': 'Hot Dog', '🍔': 'Hamburger', '🍟': 'French Fries', '🍿': 'Popcorn', '🧂': 'Salt',
+    
+    // Nature
+    '🌳': 'Tree', '🌲': 'Evergreen Tree', '🌴': 'Palm Tree', '🌵': 'Cactus', '🌱': 'Seedling',
+    '🌿': 'Herb', '☘️': 'Shamrock', '🍀': 'Four Leaf Clover', '🍃': 'Leaf', '🍂': 'Fallen Leaf',
+    '🍁': 'Maple Leaf', '🍄': 'Mushroom', '🌾': 'Sheaf of Rice', '🌷': 'Tulip', '🌹': 'Rose',
+    '🥀': 'Wilted Flower', '🌺': 'Hibiscus', '🌸': 'Cherry Blossom', '🌼': 'Daisy', '🌻': 'Sunflower',
+    '🌞': 'Sun with Face', '🌝': 'Full Moon Face', '🌛': 'First Quarter Moon', '🌜': 'Last Quarter Moon',
+    '🌚': 'New Moon Face', '🌕': 'Full Moon', '🌖': 'Waning Gibbous Moon', '🌗': 'Last Quarter Moon',
+    '🌘': 'Waning Crescent Moon', '🌑': 'New Moon', '🌒': 'Waxing Crescent Moon', '🌓': 'First Quarter Moon',
+    '🌔': 'Waxing Gibbous Moon', '🌙': 'Crescent Moon', '⭐': 'Star', '🌟': 'Glowing Star', '💫': 'Dizzy',
+    '✨': 'Sparkles', '⚡': 'Lightning', '☄️': 'Comet', '💥': 'Collision', '🔥': 'Fire',
+    '🌈': 'Rainbow', '☀️': 'Sun', '⛅': 'Sun Behind Cloud', '☁️': 'Cloud', '⛈️': 'Cloud with Lightning',
+    '🌤️': 'Sun Behind Small Cloud', '🌦️': 'Sun Behind Rain Cloud', '🌧️': 'Cloud with Rain',
+    
+    // Sports & Activities
+    '⚽': 'Soccer Ball', '🏀': 'Basketball', '🏈': 'American Football', '⚾': 'Baseball', '🎾': 'Tennis',
+    '🏐': 'Volleyball', '🏉': 'Rugby Football', '🎱': 'Pool 8 Ball', '🏓': 'Ping Pong', '🏸': 'Badminton',
+    '🥅': 'Goal Net', '🏒': 'Ice Hockey', '🏑': 'Field Hockey', '🏏': 'Cricket', '⛳': 'Flag in Hole',
+    '🏹': 'Bow and Arrow', '🎣': 'Fishing Pole', '🥊': 'Boxing Glove', '🥋': 'Martial Arts Uniform', '🎽': 'Running Shirt',
+    '🛹': 'Skateboard', '🛷': 'Sled', '⛸️': 'Ice Skate', '🥌': 'Curling Stone', '🎿': 'Skis',
+    '⛷️': 'Skier', '🏂': 'Snowboarder', '🏋️': 'Person Lifting Weights', '🤼': 'Wrestlers', '🤸': 'Person Cartwheeling',
+    '🤺': 'Fencer', '⛹️': 'Person Bouncing Ball', '🤾': 'Person Playing Handball', '🏌️': 'Person Golfing', '🏇': 'Horse Racing',
+    '🧘': 'Person in Lotus Position', '🏄': 'Surfer', '🏊': 'Swimmer', '🚣': 'Person Rowing Boat', '🧗': 'Person Climbing',
+    '🚵': 'Mountain Bicyclist', '🚴': 'Bicyclist', '🏃': 'Runner', '🚶': 'Person Walking', '🏃‍♀️': 'Woman Running',
+    '🚶‍♀️': 'Woman Walking', '🧍': 'Person Standing', '🧎': 'Person Kneeling', '🏃‍♂️': 'Man Running', '🚶‍♂️': 'Man Walking',
+    
+    // Objects & Items
+    '📦': 'Package', '📱': 'Mobile Phone', '💻': 'Laptop', '⌚': 'Watch', '🖥️': 'Desktop Computer',
+    '🖨️': 'Printer', '⌨️': 'Keyboard', '🖱️': 'Computer Mouse', '🖲️': 'Trackball', '🕹️': 'Joystick',
+    '🗜️': 'Clamp', '💾': 'Floppy Disk', '💿': 'Optical Disk', '📀': 'DVD', '📼': 'Videocassette',
+    '📷': 'Camera', '📸': 'Camera with Flash', '📹': 'Video Camera', '🎥': 'Movie Camera', '📽️': 'Film Projector',
+    '🎞️': 'Film Frames', '📞': 'Telephone Receiver', '☎️': 'Telephone', '📟': 'Pager', '📠': 'Fax Machine',
+    '📺': 'Television', '📻': 'Radio', '🎙️': 'Studio Microphone', '🎚️': 'Level Slider', '🎛️': 'Control Knobs',
+    '⏱️': 'Stopwatch', '⏲️': 'Timer Clock', '⏰': 'Alarm Clock', '🕰️': 'Mantelpiece Clock', '⌛': 'Hourglass',
+    '⏳': 'Hourglass Not Done', '📡': 'Satellite Antenna', '🔋': 'Battery', '🔌': 'Electric Plug', '💡': 'Light Bulb',
+    '🔦': 'Flashlight', '🕯️': 'Candle', '🧯': 'Fire Extinguisher', '🛢️': 'Oil Drum', '💸': 'Money with Wings',
+    '💵': 'Dollar Banknote', '💴': 'Yen Banknote', '💶': 'Euro Banknote', '💷': 'Pound Banknote', '💰': 'Money Bag',
+    
+    // Faces & Emotions
+    '😀': 'Grinning Face', '😃': 'Grinning Face with Big Eyes', '😄': 'Grinning Face with Smiling Eyes', '😁': 'Beaming Face', '😆': 'Squinting Face',
+    '😅': 'Grinning Face with Sweat', '🤣': 'Rolling on Floor Laughing', '😂': 'Face with Tears of Joy', '🙂': 'Slightly Smiling Face', '🙃': 'Upside-Down Face',
+    '😉': 'Winking Face', '😊': 'Smiling Face with Smiling Eyes', '😇': 'Smiling Face with Halo', '🥰': 'Smiling Face with Hearts', '😍': 'Star-Struck',
+    '🤩': 'Face with Star Eyes', '😘': 'Face Blowing a Kiss', '😗': 'Kissing Face', '☺️': 'Smiling Face', '😚': 'Kissing Face with Closed Eyes',
+    '😙': 'Kissing Face with Smiling Eyes', '😋': 'Face Savoring Food', '😛': 'Face with Tongue', '😜': 'Winking Face with Tongue', '🤪': 'Zany Face',
+    '😝': 'Squinting Face with Tongue', '🤑': 'Money-Mouth Face', '🤗': 'Hugging Face', '🤭': 'Face with Hand Over Mouth', '🤫': 'Shushing Face',
+    '🤔': 'Thinking Face', '🤐': 'Zipper-Mouth Face', '🤨': 'Face with Raised Eyebrow', '😐': 'Neutral Face', '😑': 'Expressionless Face',
+    '😶': 'Face Without Mouth', '😏': 'Smirking Face', '😒': 'Unamused Face', '🙄': 'Face with Rolling Eyes', '😬': 'Grimacing Face',
+    '😮': 'Face with Open Mouth', '🤤': 'Drooling Face', '😴': 'Sleeping Face', '😪': 'Sleepy Face', '😵': 'Dizzy Face',
+    '🤢': 'Nauseated Face', '🤮': 'Face Vomiting', '🤧': 'Sneezing Face', '😷': 'Face with Medical Mask', '🤒': 'Face with Thermometer',
+    
+    // Vehicles
+    '🚗': 'Car', '🚕': 'Taxi', '🚙': 'Sport Utility Vehicle', '🚌': 'Bus', '🚎': 'Trolleybus',
+    '🏎️': 'Racing Car', '🚓': 'Police Car', '🚑': 'Ambulance', '🚒': 'Fire Engine', '🚐': 'Minibus',
+    '🚚': 'Delivery Truck', '🚛': 'Articulated Lorry', '🚜': 'Tractor', '🛴': 'Kick Scooter', '🚲': 'Bicycle',
+    '🛵': 'Motor Scooter', '🏍️': 'Motorcycle', '🛺': 'Auto Rickshaw', '🚨': 'Police Car Light', '🚔': 'Oncoming Police Car',
+    '🚍': 'Oncoming Bus', '🚘': 'Oncoming Automobile', '🚖': 'Oncoming Taxi', '🚡': 'Aerial Tramway', '🚠': 'Mountain Railway',
+    '🚟': 'Suspension Railway', '🚃': 'Tram Car', '🚋': 'Tram', '🚞': 'Mountain Railway', '🚝': 'Monorail',
+    '🚄': 'High-Speed Train', '🚅': 'Bullet Train', '🚈': 'Light Rail', '🚂': 'Locomotive', '🚆': 'Train',
+    '🚇': 'Metro', '🚊': 'Tram', '🚉': 'Station', '✈️': 'Airplane', '🛫': 'Airplane Departure',
+    '🛬': 'Airplane Arrival', '🛩️': 'Small Airplane', '💺': 'Seat', '🚁': 'Helicopter', '🚀': 'Rocket',
+    '🛸': 'Flying Saucer', '🚤': 'Speedboat', '🛥️': 'Motor Boat', '⛵': 'Sailboat', '🚢': 'Ship',
+    
+    // Symbols & Shapes
+    '⭐': 'Star', '🌟': 'Glowing Star', '💫': 'Dizzy', '✨': 'Sparkles', '⚡': 'Lightning',
+    '☄️': 'Comet', '💥': 'Collision', '🔥': 'Fire', '🌈': 'Rainbow', '☀️': 'Sun',
+    '⛅': 'Sun Behind Cloud', '☁️': 'Cloud', '⛈️': 'Cloud with Lightning', '🌤️': 'Sun Behind Small Cloud',
+    '🌦️': 'Sun Behind Rain Cloud', '🌧️': 'Cloud with Rain', '🌩️': 'Cloud with Lightning and Rain', '❄️': 'Snowflake',
+    '☃️': 'Snowman', '⛄': 'Snowman Without Snow', '🌨️': 'Cloud with Snow', '💧': 'Droplet', '☔': 'Umbrella with Rain Drops',
+    '☂️': 'Umbrella', '🌊': 'Water Wave', '🌫️': 'Fog', '💨': 'Dashing Away', '🌪️': 'Tornado',
+    '🌬️': 'Wind Face', '🎈': 'Balloon', '🎉': 'Party Popper', '🎊': 'Confetti Ball', '🎁': 'Wrapped Gift',
+    '🎀': 'Ribbon', '🎂': 'Birthday Cake', '🎃': 'Jack-O-Lantern', '🎄': 'Christmas Tree', '🎅': 'Santa Claus',
+    '🤶': 'Mrs. Claus', '🎆': 'Fireworks', '🎇': 'Sparkler', '🧨': 'Firecracker', '🎗️': 'Reminder Ribbon',
+    '🎟️': 'Admission Tickets', '🎫': 'Ticket', '🎖️': 'Military Medal', '🏆': 'Trophy', '🏅': 'Sports Medal',
+    '🥇': '1st Place Medal'
+};
+
+// Function to get emoji name
+function getEmojiName(emoji) {
+    return emojiNames[emoji] || 'Unknown';
+}
+
+// Get all theme keys (excluding 'random')
+const themeKeys = Object.keys(emojiThemes);
+
+// Function to get random theme
+function getRandomTheme() {
+    const randomIndex = Math.floor(Math.random() * themeKeys.length);
+    return themeKeys[randomIndex];
+}
+
+// Load saved theme from localStorage or default to 'random'
+function loadSavedTheme() {
+    const savedTheme = localStorage.getItem('memoryGameTheme');
+    if (savedTheme && (savedTheme === 'random' || emojiThemes[savedTheme])) {
+        return savedTheme;
+    }
+    return 'random'; // Default to random on first load
+}
+
+// Save theme to localStorage
+function saveTheme(theme) {
+    localStorage.setItem('memoryGameTheme', theme);
+}
+
+// Default emoji pool - will be set based on saved theme
+let currentEmojis = emojiThemes.animals;
+let currentTheme = loadSavedTheme(); // Load saved theme or default to 'random'
 
 // DOM elements
 const gameBoard = document.getElementById('game-board');
+const matchedPairDisplay = document.getElementById('matched-pair-display');
 const timerDisplay = document.getElementById('timer');
 const movesDisplay = document.getElementById('moves');
 const gridSizeSelect = document.getElementById('grid-size');
@@ -28,6 +208,10 @@ const usernameInput = document.getElementById('username');
 const startBtn = document.getElementById('start-btn');
 const resetBtn = document.getElementById('reset-btn');
 const winModal = document.getElementById('win-modal');
+const settingsTab = document.getElementById('settings-tab');
+const emojiThemeSelect = document.getElementById('emoji-theme');
+const emojiPreview = document.getElementById('emoji-preview');
+const emojiCount = document.getElementById('emoji-count');
 const finalTimeDisplay = document.getElementById('final-time');
 const finalMovesDisplay = document.getElementById('final-moves');
 const restartBtn = document.getElementById('restart-btn');
@@ -45,6 +229,7 @@ const downloadBtn = document.getElementById('download-btn');
 const downloadStatus = document.getElementById('download-status');
 const gridSizeFilterControls = document.getElementById('grid-size-filter-controls');
 const chartGridSizeSelect = document.getElementById('chart-grid-size');
+const chartThemeSelect = document.getElementById('chart-theme');
 const deleteAccountBtn = document.getElementById('delete-account-btn');
 
 // API base URL
@@ -54,6 +239,12 @@ const API_BASE_URL = 'http://localhost:3000/api';
 function initGame() {
     const gridSize = parseInt(gridSizeSelect.value);
     gameState.gridSize = gridSize;
+    
+    // Set default message for matched pair display
+    if (matchedPairDisplay) {
+        matchedPairDisplay.textContent = 'Pairs to be found';
+        matchedPairDisplay.style.display = 'block';
+    }
     
     // For memory card game, we need an even number of cards (pairs)
     // For odd grid sizes (3x3, 5x5, 7x7, 9x9), use one less card to make it even
@@ -87,7 +278,7 @@ function initGame() {
 function generateCards() {
     const numPairs = gameState.totalPairs;
     const totalCards = gameState.gridSize * gameState.gridSize;
-    const selectedEmojis = emojis.slice(0, numPairs);
+    const selectedEmojis = currentEmojis.slice(0, numPairs);
     gameState.cards = [];
     
     // Create pairs (only playable cards)
@@ -240,6 +431,11 @@ function checkMatch() {
         secondCard.isFlipped = true; // Ensure they stay flipped
         gameState.matchedPairs++;
         
+        // Display matched emoji name above game board (stays visible)
+        const emojiName = getEmojiName(firstCard.emoji);
+        matchedPairDisplay.textContent = `Match Found: ${firstCard.emoji} ${emojiName}`;
+        matchedPairDisplay.style.display = 'block';
+        
         // Check win condition
         if (gameState.matchedPairs === gameState.totalPairs) {
             setTimeout(() => {
@@ -308,25 +504,43 @@ async function endGame() {
     finalTimeDisplay.textContent = timerDisplay.textContent;
     finalMovesDisplay.textContent = gameState.moves;
     
+    console.log('=== GAME END ===');
+    console.log('gameState.theme:', gameState.theme);
+    console.log('currentTheme:', currentTheme);
+    console.log('emojiThemeSelect.value:', emojiThemeSelect ? emojiThemeSelect.value : 'N/A');
+    
     // Save game history
     const username = usernameInput.value.trim();
     if (username) {
-        await saveGameHistory(username, gameState.timer, gameState.moves, gameState.gridSize);
+        // Use theme from gameState (captured when game started) or currentTheme as fallback
+        const themeToSave = gameState.theme || currentTheme || 'animals';
+        console.log('Theme to save:', themeToSave);
+        console.log('Calling saveGameHistory with theme:', themeToSave);
+        await saveGameHistory(username, gameState.timer, gameState.moves, gameState.gridSize, themeToSave);
         // Update username list immediately after saving
         await updateStatsUsernameList();
+        
+        // Track last played game info for Statistics tab
+        lastPlayedUsername = username;
+        lastPlayedGridSize = gameState.gridSize.toString();
     }
     
     winModal.classList.add('show');
 }
 
 // Game History Storage - Hybrid approach (localStorage + backend)
-async function saveGameHistory(username, time, moves, gridSize) {
+async function saveGameHistory(username, time, moves, gridSize, theme = 'animals') {
+    console.log('saveGameHistory called with:', { username, time, moves, gridSize, theme });
+    
     const gameData = {
         time: time,
         moves: moves,
         gridSize: gridSize,
+        theme: theme, // Add theme to game data
         date: new Date().toISOString()
     };
+    
+    console.log('Game data to save:', gameData);
     
     // Save to localStorage (for quick access)
     const gameHistory = JSON.parse(localStorage.getItem('memoryGameHistory') || '{}');
@@ -337,6 +551,8 @@ async function saveGameHistory(username, time, moves, gridSize) {
     
     gameHistory[username].push(gameData);
     localStorage.setItem('memoryGameHistory', JSON.stringify(gameHistory));
+    
+    console.log('Saved to localStorage. Last game:', gameHistory[username][gameHistory[username].length - 1]);
     
     // Save to backend server
     try {
@@ -430,6 +646,31 @@ async function getAllUsernames() {
     return localStorageUsernames;
 }
 
+// Save username and grid size to localStorage
+function saveLastUsername(username) {
+    if (username) {
+        localStorage.setItem('memoryGameLastUsername', username);
+    }
+}
+
+function saveLastGridSize(gridSize) {
+    if (gridSize) {
+        localStorage.setItem('memoryGameLastGridSize', gridSize.toString());
+    }
+}
+
+function loadLastUsername() {
+    return localStorage.getItem('memoryGameLastUsername') || '';
+}
+
+function loadLastGridSize() {
+    return localStorage.getItem('memoryGameLastGridSize') || '4';
+}
+
+// Track last played game info for Statistics tab
+let lastPlayedUsername = null;
+let lastPlayedGridSize = null;
+
 // Tab Switching
 tabButtons.forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -443,24 +684,65 @@ tabButtons.forEach(btn => {
         btn.classList.add('active');
         
         // Update active tab content
-        if (tabName === 'game') {
+        if (tabName === 'settings') {
+            settingsTab.classList.add('active');
+            gameTab.classList.remove('active');
+            statisticsTab.classList.remove('active');
+            updateEmojiPreview();
+        } else if (tabName === 'game') {
+            settingsTab.classList.remove('active');
             gameTab.classList.add('active');
             statisticsTab.classList.remove('active');
         } else {
+            settingsTab.classList.remove('active');
             gameTab.classList.remove('active');
             statisticsTab.classList.add('active');
             
             // Refresh username list when switching to Statistics tab
             await updateStatsUsernameList();
             
-            // Restore selected username if it was valid
-            if (selectedUsername) {
-                const option = statsUsernameSelect.querySelector(`option[value="${selectedUsername}"]`);
+            // Determine which username to select:
+            // 1. If user just played a game, use that username
+            // 2. Otherwise, use previously selected username
+            // 3. Otherwise, use last saved username
+            let usernameToSelect = null;
+            
+            if (lastPlayedUsername) {
+                // User just played a game, use that username
+                usernameToSelect = lastPlayedUsername;
+                lastPlayedUsername = null; // Clear after using
+            } else if (selectedUsername) {
+                // Use previously selected username
+                usernameToSelect = selectedUsername;
+            } else {
+                // Use last saved username
+                usernameToSelect = loadLastUsername();
+            }
+            
+            // Select username if valid
+            if (usernameToSelect) {
+                const option = statsUsernameSelect.querySelector(`option[value="${usernameToSelect}"]`);
                 if (option) {
-                    statsUsernameSelect.value = selectedUsername;
+                    statsUsernameSelect.value = usernameToSelect;
                     // Automatically load statistics for the selected user
-                    await displayStatistics(selectedUsername);
+                    await displayStatistics(usernameToSelect);
+                    
+                    // If user just played a game, also set grid size filter
+                    if (lastPlayedGridSize) {
+                        const gridSizeOption = chartGridSizeSelect.querySelector(`option[value="${lastPlayedGridSize}"]`);
+                        if (gridSizeOption) {
+                            chartGridSizeSelect.value = lastPlayedGridSize;
+                            updateStatisticsDisplay();
+                        }
+                        lastPlayedGridSize = null; // Clear after using
+                    }
+                } else {
+                    // Username not found, just show empty state
+                    statisticsContent.innerHTML = '<p class="no-stats-message">Select a user to view statistics</p>';
                 }
+            } else {
+                // No username to select, show empty state
+                statisticsContent.innerHTML = '<p class="no-stats-message">Select a user to view statistics</p>';
             }
         }
     });
@@ -559,6 +841,43 @@ function filterGamesByGridSize(games, gridSize) {
     return games.filter(game => game.gridSize === parseInt(gridSize));
 }
 
+// Filter games by theme
+function filterGamesByTheme(games, theme) {
+    if (theme === 'all' || !theme) {
+        return games;
+    }
+    return games.filter(game => {
+        const gameTheme = game.theme || 'animals'; // Default to animals for old records
+        return gameTheme === theme;
+    });
+}
+
+// Get all unique themes from games
+function getUniqueThemes(games) {
+    const themes = new Set();
+    games.forEach(game => {
+        const theme = game.theme || 'animals'; // Default to animals for old records
+        themes.add(theme);
+    });
+    return Array.from(themes).sort();
+}
+
+// Helper function to get theme display name (plain text, no emojis)
+function getThemeDisplayName(theme) {
+    const themeNames = {
+        'animals': 'Animals',
+        'food': 'Food & Drinks',
+        'nature': 'Nature',
+        'sports': 'Sports & Activities',
+        'objects': 'Objects & Items',
+        'faces': 'Faces & Emotions',
+        'vehicles': 'Vehicles',
+        'symbols': 'Symbols & Shapes',
+        'random': 'Random'
+    };
+    return themeNames[theme] || 'Animals'; // Default to Animals if theme not found
+}
+
 // Format Time
 function formatTime(seconds) {
     const minutes = Math.floor(seconds / 60);
@@ -572,12 +891,27 @@ let currentUserGames = [];
 // Update statistics and charts based on current filter (immediate update)
 function updateStatisticsDisplay() {
     const selectedGridSize = chartGridSizeSelect.value;
-    const games = filterGamesByGridSize(currentUserGames, selectedGridSize);
+    const selectedTheme = chartThemeSelect ? chartThemeSelect.value : 'all';
+    
+    // Apply both filters
+    let games = filterGamesByGridSize(currentUserGames, selectedGridSize);
+    games = filterGamesByTheme(games, selectedTheme);
+    
     const stats = calculateStatistics(games);
     
     if (!stats) {
         statisticsContent.innerHTML = '<p class="no-stats-message">No game history found for this user</p>';
         return;
+    }
+    
+    // Create filter description
+    let filterDesc = '';
+    if (selectedGridSize !== 'all' && selectedTheme !== 'all') {
+        filterDesc = ` (${selectedGridSize}x${selectedGridSize}, ${getThemeDisplayName(selectedTheme)})`;
+    } else if (selectedGridSize !== 'all') {
+        filterDesc = ` (${selectedGridSize}x${selectedGridSize})`;
+    } else if (selectedTheme !== 'all') {
+        filterDesc = ` (${getThemeDisplayName(selectedTheme)})`;
     }
     
     // Create statistics HTML
@@ -607,22 +941,23 @@ function updateStatisticsDisplay() {
         
         <div class="charts-container">
             <div class="chart-wrapper">
-                <h3>Time Over Games${selectedGridSize !== 'all' ? ` (${selectedGridSize}x${selectedGridSize})` : ''}</h3>
+                <h3>Time Over Games${filterDesc}</h3>
                 <canvas id="time-chart"></canvas>
             </div>
             <div class="chart-wrapper">
-                <h3>Moves Over Games${selectedGridSize !== 'all' ? ` (${selectedGridSize}x${selectedGridSize})` : ''}</h3>
+                <h3>Moves Over Games${filterDesc}</h3>
                 <canvas id="moves-chart"></canvas>
             </div>
         </div>
         
         <div class="game-history">
-            <h3>Game History${selectedGridSize !== 'all' ? ` (${selectedGridSize}x${selectedGridSize})` : ''}</h3>
+            <h3>Game History${filterDesc}</h3>
             <table class="history-table">
                 <thead>
                     <tr>
                         <th>Date</th>
                         <th>Grid Size</th>
+                        <th>Theme</th>
                         <th>Time</th>
                         <th>Moves</th>
                     </tr>
@@ -636,10 +971,13 @@ function updateStatisticsDisplay() {
     sortedGames.forEach(game => {
         const date = new Date(game.date);
         const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        // Set default theme to 'animals' for existing records without theme
+        const theme = game.theme || 'animals';
         html += `
             <tr>
                 <td>${dateStr}</td>
                 <td>${game.gridSize}x${game.gridSize}</td>
+                <td>${getThemeDisplayName(theme)}</td>
                 <td>${formatTime(game.time)}</td>
                 <td>${game.moves}</td>
             </tr>
@@ -670,7 +1008,8 @@ async function displayStatistics(username, preserveSelection = false) {
         gridSizeFilterControls.style.display = 'flex';
         
         // Preserve current selection if user has manually selected something
-        const currentSelection = preserveSelection ? chartGridSizeSelect.value : null;
+        const currentGridSelection = preserveSelection ? chartGridSizeSelect.value : null;
+        const currentThemeSelection = preserveSelection ? chartThemeSelect.value : null;
         
         // Populate grid size filter
         const uniqueSizes = getUniqueGridSizes(allGames);
@@ -682,16 +1021,31 @@ async function displayStatistics(username, preserveSelection = false) {
             chartGridSizeSelect.appendChild(option);
         });
         
-        // Restore user's selection or set default to most frequently played grid size
-        if (currentSelection && chartGridSizeSelect.querySelector(`option[value="${currentSelection}"]`)) {
+        // Populate theme filter
+        const uniqueThemes = getUniqueThemes(allGames);
+        chartThemeSelect.innerHTML = '<option value="all">All Themes</option>';
+        uniqueThemes.forEach(theme => {
+            const option = document.createElement('option');
+            option.value = theme;
+            option.textContent = getThemeDisplayName(theme);
+            chartThemeSelect.appendChild(option);
+        });
+        
+        // Restore user's selection or set defaults
+        if (currentGridSelection && chartGridSizeSelect.querySelector(`option[value="${currentGridSelection}"]`)) {
             // User had a selection and it's still valid, restore it
-            chartGridSizeSelect.value = currentSelection;
+            chartGridSizeSelect.value = currentGridSelection;
         } else {
             // Set default to most frequently played grid size (only on first load)
             const mostFrequent = getMostFrequentGridSize(allGames);
             if (mostFrequent) {
                 chartGridSizeSelect.value = mostFrequent;
             }
+        }
+        
+        // Restore theme selection if it was valid
+        if (currentThemeSelection && chartThemeSelect.querySelector(`option[value="${currentThemeSelection}"]`)) {
+            chartThemeSelect.value = currentThemeSelection;
         }
     } else {
         downloadControls.style.display = 'none';
@@ -778,9 +1132,10 @@ function createMovesChart(games) {
 
 // Load Statistics Event Listener
 loadStatsBtn.addEventListener('click', async () => {
-    // Preserve selected username and grid size filter before refreshing
+    // Preserve selected username and filter selections before refreshing
     const selectedUsername = statsUsernameSelect.value.trim();
     const selectedGridSize = chartGridSizeSelect.value;
+    const selectedTheme = chartThemeSelect.value;
     
     // Refresh username list before loading statistics
     await updateStatsUsernameList();
@@ -797,15 +1152,21 @@ loadStatsBtn.addEventListener('click', async () => {
     // Get the username (either restored or newly selected)
     const username = statsUsernameSelect.value.trim();
     if (username) {
-        // Load statistics and preserve grid size filter selection
+        // Load statistics and preserve filter selections
         await displayStatistics(username, true);
         
         // Restore grid size filter selection after loading
         if (selectedGridSize && chartGridSizeSelect.querySelector(`option[value="${selectedGridSize}"]`)) {
             chartGridSizeSelect.value = selectedGridSize;
-            // Update display with the selected grid size filter
-            updateStatisticsDisplay();
         }
+        
+        // Restore theme filter selection after loading
+        if (selectedTheme && chartThemeSelect.querySelector(`option[value="${selectedTheme}"]`)) {
+            chartThemeSelect.value = selectedTheme;
+        }
+        
+        // Update display with the selected filters
+        updateStatisticsDisplay();
     } else {
         statisticsContent.innerHTML = '<p class="no-stats-message">Please select a user</p>';
         downloadControls.style.display = 'none';
@@ -815,6 +1176,14 @@ loadStatsBtn.addEventListener('click', async () => {
 
 // Grid size filter change event listener - immediate update
 chartGridSizeSelect.addEventListener('change', () => {
+    // Update statistics and charts immediately without reloading data
+    if (currentUserGames.length > 0) {
+        updateStatisticsDisplay();
+    }
+});
+
+// Theme filter change event listener - immediate update
+chartThemeSelect.addEventListener('change', () => {
     // Update statistics and charts immediately without reloading data
     if (currentUserGames.length > 0) {
         updateStatisticsDisplay();
@@ -970,11 +1339,12 @@ downloadBtn.addEventListener('click', async () => {
             
             if (format === 'csv') {
                 // Create CSV
-                const header = 'Date,Time (seconds),Moves,Grid Size\n';
+                const header = 'Date,Time (seconds),Moves,Grid Size,Theme\n';
                 const rows = games.map(game => {
                     const dateStr = new Date(game.date).toISOString();
+                    const theme = game.theme || 'animals'; // Default to animals for old records
                     // Escape commas in CSV
-                    return `${dateStr},${game.time},${game.moves},${game.gridSize}x${game.gridSize}`;
+                    return `${dateStr},${game.time},${game.moves},${game.gridSize}x${game.gridSize},${theme}`;
                 }).join('\n');
                 content = header + rows;
                 filename = `${username}_history.csv`;
@@ -1030,7 +1400,37 @@ startBtn.addEventListener('click', () => {
     usernameError.style.display = 'none';
     usernameInput.style.borderColor = '#667eea';
     
+    // Save username to localStorage
+    saveLastUsername(username);
+    
+    // IMPORTANT: Set theme FIRST, before calling initGame()
+    // Always get fresh value from selector to ensure we have the latest theme
+    const selectedTheme = emojiThemeSelect ? emojiThemeSelect.value : 'animals';
+    let themeToUse;
+    
+    if (selectedTheme === 'random') {
+        // If random, pick a random theme for this game
+        themeToUse = getRandomTheme();
+    } else {
+        // Use the selected theme directly
+        themeToUse = selectedTheme || 'animals';
+    }
+    
+    // Update both currentTheme and gameState.theme BEFORE initGame()
+    currentTheme = themeToUse;
+    currentEmojis = emojiThemes[themeToUse];
+    gameState.theme = themeToUse;
+    
+    console.log('=== GAME START ===');
+    console.log('Selector value:', selectedTheme);
+    console.log('Theme to use:', themeToUse);
+    console.log('gameState.theme set to:', gameState.theme);
+    
     initGame();
+    
+    // Verify theme is still correct after initGame()
+    console.log('After initGame(), gameState.theme:', gameState.theme);
+    
     gameState.isGameStarted = true;
     gameState.isPaused = false;
     startBtn.style.display = 'none';
@@ -1087,6 +1487,9 @@ restartBtn.addEventListener('click', () => {
 
 // Grid size change event listener - allow users to change grid size anytime
 gridSizeSelect.addEventListener('change', () => {
+    // Save grid size to localStorage
+    saveLastGridSize(gridSizeSelect.value);
+    
     // If game is in progress, reset it with new grid size
     if (gameState.isGameStarted) {
         stopTimer();
@@ -1109,10 +1512,87 @@ usernameInput.addEventListener('input', () => {
     if (usernameInput.value.trim()) {
         usernameError.style.display = 'none';
         usernameInput.style.borderColor = '#667eea';
+        // Save username as user types
+        saveLastUsername(usernameInput.value.trim());
     }
 });
 
+// Emoji Theme Selection
+function updateEmojiPreview() {
+    const selectedTheme = emojiThemeSelect.value;
+    saveTheme(selectedTheme); // Save to localStorage
+    
+    // If random theme, select a random theme for this session
+    let actualTheme = selectedTheme;
+    if (selectedTheme === 'random') {
+        actualTheme = getRandomTheme();
+    }
+    
+    // Update current theme and emojis
+    currentTheme = actualTheme;
+    currentEmojis = emojiThemes[actualTheme];
+    emojiCount.textContent = currentEmojis.length;
+    
+    console.log('Theme updated - selected:', selectedTheme, 'actual:', actualTheme, 'currentTheme:', currentTheme);
+    
+    // Display preview of emojis
+    emojiPreview.innerHTML = '';
+    currentEmojis.forEach((emoji, index) => {
+        const emojiSpan = document.createElement('span');
+        emojiSpan.className = 'preview-emoji';
+        emojiSpan.textContent = emoji;
+        // Set tooltip with emoji name
+        const emojiName = getEmojiName(emoji);
+        emojiSpan.title = emojiName;
+        emojiPreview.appendChild(emojiSpan);
+    });
+}
+
+// Theme change event listener
+emojiThemeSelect.addEventListener('change', () => {
+    updateEmojiPreview();
+    // If game is not started, reinitialize with new theme
+    if (!gameState.isGameStarted) {
+        initGame();
+    }
+});
+
+// Initialize theme selector with saved theme
+function initializeThemeSelector() {
+    const savedTheme = loadSavedTheme();
+    emojiThemeSelect.value = savedTheme;
+    
+    // If saved theme is 'random', pick a random theme for this session
+    if (savedTheme === 'random') {
+        const randomTheme = getRandomTheme();
+        currentTheme = randomTheme;
+        currentEmojis = emojiThemes[randomTheme];
+    } else {
+        currentTheme = savedTheme;
+        currentEmojis = emojiThemes[savedTheme];
+    }
+    
+    // Update preview (this will also update currentTheme if needed)
+    updateEmojiPreview();
+    
+    console.log('Theme initialized:', savedTheme, 'currentTheme:', currentTheme);
+}
+
 // Initialize on page load
+initializeThemeSelector();
+
+// Load saved username and grid size
+const savedUsername = loadLastUsername();
+const savedGridSize = loadLastGridSize();
+
+if (savedUsername) {
+    usernameInput.value = savedUsername;
+}
+
+if (savedGridSize && gridSizeSelect.querySelector(`option[value="${savedGridSize}"]`)) {
+    gridSizeSelect.value = savedGridSize;
+}
+
 initGame();
 updateStatsUsernameList();
 

@@ -66,7 +66,7 @@ function sanitizeFilename(username) {
 // Save game history to file
 app.post('/api/save-history', (req, res) => {
     try {
-        const { username, time, moves, gridSize, date } = req.body;
+        const { username, time, moves, gridSize, theme, date } = req.body;
         
         if (!username) {
             return res.status(400).json({ error: 'Username is required' });
@@ -99,17 +99,18 @@ app.post('/api/save-history', (req, res) => {
             fileData = { username: username, games: [] };
         }
 
-        // Add new game
-        fileData.games.push({ time, moves, gridSize, date });
+        // Add new game (set default theme to 'animals' if not provided)
+        fileData.games.push({ time, moves, gridSize, theme: theme || 'animals', date });
 
         // Save JSON file with original username stored
         fs.writeFileSync(jsonFile, JSON.stringify(fileData, null, 2), 'utf8');
 
         // Save CSV file
-        const csvHeader = 'Date,Time (seconds),Moves,Grid Size\n';
+        const csvHeader = 'Date,Time (seconds),Moves,Grid Size,Theme\n';
         const csvRows = fileData.games.map(game => {
             const dateStr = new Date(game.date).toISOString();
-            return `${dateStr},${game.time},${game.moves},${game.gridSize}x${game.gridSize}`;
+            const theme = game.theme || 'animals'; // Default to animals for old records
+            return `${dateStr},${game.time},${game.moves},${game.gridSize}x${game.gridSize},${theme}`;
         }).join('\n');
         fs.writeFileSync(csvFile, csvHeader + csvRows, 'utf8');
 

@@ -12,10 +12,40 @@
         <header class="game-header">
             <h1>🎮 Memory Card Game</h1>
             <div class="tabs">
+                <button class="tab-btn" data-tab="settings">Settings</button>
                 <button class="tab-btn active" data-tab="game">Game</button>
                 <button class="tab-btn" data-tab="statistics">Statistics</button>
             </div>
         </header>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content">
+            <div class="settings-container">
+                <h2>Emoji Theme Selection</h2>
+                <p>Choose a theme for your memory cards. Each theme includes enough emojis for all grid sizes (up to 9x9).</p>
+                
+                <div class="theme-selection">
+                    <label for="emoji-theme">Select Theme:</label>
+                    <select id="emoji-theme">
+                        <option value="random">🎲 Random</option>
+                        <option value="animals">🐾 Animals</option>
+                        <option value="food">🍕 Food & Drinks</option>
+                        <option value="nature">🌳 Nature</option>
+                        <option value="sports">⚽ Sports & Activities</option>
+                        <option value="objects">📦 Objects & Items</option>
+                        <option value="faces">😀 Faces & Emotions</option>
+                        <option value="vehicles">🚗 Vehicles</option>
+                        <option value="symbols">⭐ Symbols & Shapes</option>
+                    </select>
+                </div>
+
+                <div class="theme-preview">
+                    <h3>Theme Preview</h3>
+                    <div id="emoji-preview" class="emoji-preview-grid"></div>
+                    <p class="theme-info">This theme includes <span id="emoji-count">0</span> unique emojis</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Game Tab -->
         <div id="game-tab" class="tab-content active">
@@ -53,6 +83,7 @@
                 <button id="reset-btn" class="btn btn-secondary" style="display: none;">Reset</button>
             </div>
 
+            <div id="matched-pair-display" class="matched-pair-display" style="text-align: center; margin-bottom: 15px; padding: 10px; background: #e8f5e9; border-radius: 8px; font-size: 1.2em; color: #2e7d32; font-weight: bold;">Pairs to be found</div>
             <div id="game-board" class="game-board"></div>
         </div>
 
@@ -74,6 +105,12 @@
                     <label for="chart-grid-size">Filter by Grid Size:</label>
                     <select id="chart-grid-size">
                         <option value="all">All Grid Sizes</option>
+                    </select>
+                </div>
+                <div class="control-group" style="margin-top: 10px;">
+                    <label for="chart-theme">Filter by Theme:</label>
+                    <select id="chart-theme">
+                        <option value="all">All Themes</option>
                     </select>
                 </div>
             </div>
