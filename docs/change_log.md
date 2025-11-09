@@ -380,3 +380,65 @@ _This section will be updated as new feature requests are made._
 - Matched pair display uses same styling as success messages (green background)
 - Display updates dynamically as matches are found during gameplay
 
+---
+
+## Latest Improvements (Current Session)
+**Date**: 2025-11-09
+
+### 20. Grid Size Selection and Emoji Persistence in Settings
+**Date**: 2025-11-09  
+**Request**: Add grid-size selector in Settings panel. Add random selection button. Highlight selected emojis for grid-size. Persist selected emojis per grid-size+theme combination.
+
+**Implementation**:
+- **Grid Size Selector**: Added grid-size dropdown next to theme selector in Settings panel
+  - Options: 3x3 through 9x9 (matches game grid size options)
+  - Syncs with game grid size selector
+  - Updates preview when changed
+- **Random Selection Button**: Added "Random Selection" button next to "Theme Preview" heading
+  - Generates new random emoji selection for current grid-size and theme
+  - Saves selection automatically
+  - Updates preview to highlight new selection
+- **Emoji Selection System**: Implemented selection storage per grid-size+theme combination
+  - `selectedEmojisByGridSize` object stores selections (key format: `"gridSize_theme"`)
+  - `getSelectedEmojisForGridSize()` retrieves saved selection or generates new one
+  - `generateRandomEmojiSelection()` creates random selection for a grid size
+  - Selections saved to localStorage with key `memoryGameSelectedEmojis`
+- **Visual Highlighting**: Selected emojis highlighted in preview grid
+  - `.selected-emoji` CSS class with green background (#c8e6c9), green border, and shadow
+  - Tooltip shows "(Selected)" for highlighted emojis
+  - Preview shows all theme emojis with selected ones highlighted
+- **Persistence**: Selected emojis persist across sessions
+  - Same grid-size+theme combination always uses same emojis
+  - Only changes when user clicks "Random Selection" button
+  - Automatically generates new selection if none exists for a combination
+- **Game Integration**: `generateCards()` uses selected emojis instead of just slicing theme array
+  - Ensures consistent emoji sets for same grid-size+theme
+  - Multiple games with same settings use identical emoji sets
+
+**Technical Details**:
+- Storage key format: `${gridSize}_${currentTheme}` (e.g., "4_animals", "3_food")
+- `loadSelectedEmojis()` and `saveSelectedEmojis()` handle localStorage persistence
+- `updateEmojiPreview()` displays all emojis with selected ones highlighted
+- Settings grid-size selector syncs with game grid-size selector
+- Tab switching syncs grid-size selectors
+- Event listeners for settings grid-size change and random selection button
+
+### 21. Settings Panel Label Styling
+**Date**: 2025-11-09  
+**Request**: Make "Select Grid Size" label match "Select Theme" label styling. Align to left. Add spacing between theme dropdown and grid size label.
+
+**Implementation**:
+- Updated `.theme-selection` CSS to use flexbox layout
+  - `display: flex`, `align-items: center`, `gap: 10px`
+  - Allows labels and selects to appear on same line
+- Updated `.theme-selection label` styling
+  - Changed from `display: block` to `display: inline-block`
+  - Removed `margin-bottom: 10px`, set to `0`
+  - Added `white-space: nowrap` to prevent label wrapping
+- Updated `.theme-selection select` styling
+  - Changed from `width: 100%` to `width: auto`
+  - Added `min-width: 200px` for consistent sizing
+  - Kept `max-width: 300px` for responsiveness
+- Removed inline `margin-left` style from grid size label
+- Both labels now have identical styling and alignment
+

@@ -37,10 +37,23 @@
                         <option value="vehicles">🚗 Vehicles</option>
                         <option value="symbols">⭐ Symbols & Shapes</option>
                     </select>
+                    <label for="settings-grid-size">Select Grid Size:</label>
+                    <select id="settings-grid-size">
+                        <option value="3">3x3</option>
+                        <option value="4" selected>4x4</option>
+                        <option value="5">5x5</option>
+                        <option value="6">6x6</option>
+                        <option value="7">7x7</option>
+                        <option value="8">8x8</option>
+                        <option value="9">9x9</option>
+                    </select>
                 </div>
 
                 <div class="theme-preview">
-                    <h3>Theme Preview</h3>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                        <h3 style="margin: 0;">Theme Preview</h3>
+                        <button id="random-selection-btn" class="btn btn-secondary" style="font-size: 0.9em;">Random Selection</button>
+                    </div>
                     <div id="emoji-preview" class="emoji-preview-grid"></div>
                     <p class="theme-info">This theme includes <span id="emoji-count">0</span> unique emojis</p>
                 </div>

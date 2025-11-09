@@ -198,6 +198,60 @@ function saveTheme(theme) {
 let currentEmojis = emojiThemes.animals;
 let currentTheme = loadSavedTheme(); // Load saved theme or default to 'random'
 
+// Store selected emojis per grid size
+let selectedEmojisByGridSize = {};
+
+// Load selected emojis from localStorage
+function loadSelectedEmojis() {
+    const saved = localStorage.getItem('memoryGameSelectedEmojis');
+    if (saved) {
+        try {
+            selectedEmojisByGridSize = JSON.parse(saved);
+        } catch (e) {
+            selectedEmojisByGridSize = {};
+        }
+    }
+}
+
+// Save selected emojis to localStorage
+function saveSelectedEmojis() {
+    localStorage.setItem('memoryGameSelectedEmojis', JSON.stringify(selectedEmojisByGridSize));
+}
+
+// Get selected emojis for a grid size (or generate new ones if not exists)
+function getSelectedEmojisForGridSize(gridSize, themeEmojis) {
+    const key = `${gridSize}_${currentTheme}`;
+    
+    // If we have saved emojis for this grid size and theme, use them
+    if (selectedEmojisByGridSize[key] && selectedEmojisByGridSize[key].length > 0) {
+        return selectedEmojisByGridSize[key];
+    }
+    
+    // Otherwise, generate new random selection and save it
+    const newSelection = generateRandomEmojiSelection(gridSize, themeEmojis);
+    selectedEmojisByGridSize[key] = newSelection;
+    saveSelectedEmojis();
+    return newSelection;
+}
+
+// Generate random emoji selection for a grid size
+function generateRandomEmojiSelection(gridSize, themeEmojis) {
+    const totalCards = gridSize * gridSize;
+    const numPairs = Math.floor(totalCards / 2);
+    
+    // Shuffle and select random emojis
+    const shuffled = [...themeEmojis].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, numPairs);
+}
+
+// Save selected emojis for current grid size and theme
+function saveEmojiSelectionForCurrentGridSize(emojis) {
+    const gridSize = parseInt(settingsGridSizeSelect.value);
+    const key = `${gridSize}_${currentTheme}`;
+    selectedEmojisByGridSize[key] = emojis;
+    saveSelectedEmojis();
+}
+
 // DOM elements
 const gameBoard = document.getElementById('game-board');
 const matchedPairDisplay = document.getElementById('matched-pair-display');
@@ -210,6 +264,8 @@ const resetBtn = document.getElementById('reset-btn');
 const winModal = document.getElementById('win-modal');
 const settingsTab = document.getElementById('settings-tab');
 const emojiThemeSelect = document.getElementById('emoji-theme');
+const settingsGridSizeSelect = document.getElementById('settings-grid-size');
+const randomSelectionBtn = document.getElementById('random-selection-btn');
 const emojiPreview = document.getElementById('emoji-preview');
 const emojiCount = document.getElementById('emoji-count');
 const finalTimeDisplay = document.getElementById('final-time');
@@ -278,7 +334,10 @@ function initGame() {
 function generateCards() {
     const numPairs = gameState.totalPairs;
     const totalCards = gameState.gridSize * gameState.gridSize;
-    const selectedEmojis = currentEmojis.slice(0, numPairs);
+    
+    // Get selected emojis for current grid size and theme
+    const selectedEmojis = getSelectedEmojisForGridSize(gameState.gridSize, currentEmojis);
+    
     gameState.cards = [];
     
     // Create pairs (only playable cards)
@@ -688,6 +747,10 @@ tabButtons.forEach(btn => {
             settingsTab.classList.add('active');
             gameTab.classList.remove('active');
             statisticsTab.classList.remove('active');
+            // Sync settings grid size with game grid size
+            if (settingsGridSizeSelect) {
+                settingsGridSizeSelect.value = gridSizeSelect.value;
+            }
             updateEmojiPreview();
         } else if (tabName === 'game') {
             settingsTab.classList.remove('active');
@@ -1490,6 +1553,15 @@ gridSizeSelect.addEventListener('change', () => {
     // Save grid size to localStorage
     saveLastGridSize(gridSizeSelect.value);
     
+    // Sync settings grid size with game grid size
+    if (settingsGridSizeSelect) {
+        settingsGridSizeSelect.value = gridSizeSelect.value;
+        // Update preview if we're on settings tab
+        if (settingsTab && settingsTab.classList.contains('active')) {
+            updateEmojiPreview();
+        }
+    }
+    
     // If game is in progress, reset it with new grid size
     if (gameState.isGameStarted) {
         stopTimer();
@@ -1535,15 +1607,31 @@ function updateEmojiPreview() {
     
     console.log('Theme updated - selected:', selectedTheme, 'actual:', actualTheme, 'currentTheme:', currentTheme);
     
-    // Display preview of emojis
+    // Get grid size from settings
+    const gridSize = parseInt(settingsGridSizeSelect.value);
+    const totalCards = gridSize * gridSize;
+    const numPairs = Math.floor(totalCards / 2);
+    
+    // Get selected emojis for this grid size and theme
+    const selectedEmojis = getSelectedEmojisForGridSize(gridSize, currentEmojis);
+    
+    // Display preview of all emojis with selected ones highlighted
     emojiPreview.innerHTML = '';
     currentEmojis.forEach((emoji, index) => {
         const emojiSpan = document.createElement('span');
         emojiSpan.className = 'preview-emoji';
         emojiSpan.textContent = emoji;
+        
         // Set tooltip with emoji name
         const emojiName = getEmojiName(emoji);
         emojiSpan.title = emojiName;
+        
+        // Highlight if this emoji is selected for current grid size
+        if (selectedEmojis.includes(emoji)) {
+            emojiSpan.classList.add('selected-emoji');
+            emojiSpan.title = `${emojiName} (Selected)`;
+        }
+        
         emojiPreview.appendChild(emojiSpan);
     });
 }
@@ -1557,10 +1645,50 @@ emojiThemeSelect.addEventListener('change', () => {
     }
 });
 
+// Grid size change event listener in Settings
+if (settingsGridSizeSelect) {
+    settingsGridSizeSelect.addEventListener('change', () => {
+        updateEmojiPreview();
+        // Sync game grid size with settings grid size
+        gridSizeSelect.value = settingsGridSizeSelect.value;
+        // If game is not started, reinitialize with new grid size
+        if (!gameState.isGameStarted) {
+            initGame();
+        }
+    });
+}
+
+// Random selection button event listener
+if (randomSelectionBtn) {
+    randomSelectionBtn.addEventListener('click', () => {
+        const gridSize = parseInt(settingsGridSizeSelect.value);
+        
+        // Generate new random selection
+        const newSelection = generateRandomEmojiSelection(gridSize, currentEmojis);
+        
+        // Save the selection
+        saveEmojiSelectionForCurrentGridSize(newSelection);
+        
+        // Update preview to show new selection
+        updateEmojiPreview();
+        
+        // If game is not started, reinitialize with new selection
+        if (!gameState.isGameStarted) {
+            initGame();
+        }
+    });
+}
+
 // Initialize theme selector with saved theme
 function initializeThemeSelector() {
+    // Load selected emojis from localStorage
+    loadSelectedEmojis();
+    
     const savedTheme = loadSavedTheme();
     emojiThemeSelect.value = savedTheme;
+    
+    // Sync settings grid size with game grid size
+    settingsGridSizeSelect.value = gridSizeSelect.value;
     
     // If saved theme is 'random', pick a random theme for this session
     if (savedTheme === 'random') {
