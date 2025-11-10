@@ -416,8 +416,10 @@ const deleteAccountBtn = document.getElementById('delete-account-btn');
 // API base URL
 const API_BASE_URL = 'http://localhost:3000/api';
 
-// Check if running from file:// protocol
-const isFileProtocol = window.location.protocol === 'file:';
+// Check if running from file:// protocol or static hosting (not localhost:3000)
+// This makes the app work on file://, GitHub Pages, and other static hosting
+const isStaticHosting = window.location.protocol === 'file:' || 
+                        !window.location.hostname.includes('localhost');
 
 // Initialize game
 function initGame() {
@@ -782,8 +784,8 @@ async function saveGameHistory(username, time, moves, gridSize, theme = 'animals
     
     console.log('Saved to localStorage. Last game:', gameHistory[username][gameHistory[username].length - 1]);
     
-    // Save to backend server (skip if file:// protocol)
-    if (!isFileProtocol) {
+    // Save to backend server (skip if static hosting)
+    if (!isStaticHosting) {
         try {
             const response = await fetch(`${API_BASE_URL}/save-history`, {
                 method: 'POST',
@@ -806,7 +808,7 @@ async function saveGameHistory(username, time, moves, gridSize, theme = 'animals
             // Continue even if server save fails
         }
     } else {
-        console.log('Running from file:// protocol - skipping server save');
+        console.log('Running from static hosting - skipping server save');
     }
 }
 
@@ -817,8 +819,8 @@ async function getGameHistory(username) {
     console.log('getGameHistory - localStorageGames:', localStorageGames);
     console.log('getGameHistory - sample themes from localStorage:', localStorageGames.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
     
-    // Try to get from server and merge (but only if username matches exactly) - skip if file:// protocol
-    if (!isFileProtocol) {
+    // Try to get from server and merge (but only if username matches exactly) - skip if static hosting
+    if (!isStaticHosting) {
         try {
             const response = await fetch(`${API_BASE_URL}/get-history/${encodeURIComponent(username)}`);
             if (response.ok) {
@@ -865,7 +867,7 @@ async function getGameHistory(username) {
             console.error('Error getting from server, using localStorage:', error);
         }
     } else {
-        console.log('Running from file:// protocol - using localStorage only');
+        console.log('Running from static hosting - using localStorage only');
     }
     
     // Return localStorage games (always available and case-sensitive)
@@ -878,8 +880,8 @@ async function getAllUsernames() {
     const gameHistory = JSON.parse(localStorage.getItem('memoryGameHistory') || '{}');
     const localStorageUsernames = Object.keys(gameHistory).sort();
     
-    // Try to get from server and merge with localStorage - skip if file:// protocol
-    if (!isFileProtocol) {
+    // Try to get from server and merge with localStorage - skip if static hosting
+    if (!isStaticHosting) {
         try {
             const response = await fetch(`${API_BASE_URL}/users`);
             if (response.ok) {
@@ -894,7 +896,7 @@ async function getAllUsernames() {
             console.log('Server not available, using localStorage only:', error);
         }
     } else {
-        console.log('Running from file:// protocol - using localStorage only');
+        console.log('Running from static hosting - using localStorage only');
     }
     
     // Return localStorage usernames (always available)
@@ -1490,8 +1492,8 @@ deleteAccountBtn.addEventListener('click', async () => {
             localStorage.setItem('memoryGameHistory', JSON.stringify(verifyHistory));
         }
         
-        // Delete from server - remove both JSON and CSV files (skip if file:// protocol)
-        if (!isFileProtocol) {
+        // Delete from server - remove both JSON and CSV files (skip if static hosting)
+        if (!isStaticHosting) {
             try {
                 const response = await fetch(`${API_BASE_URL}/delete-user/${encodeURIComponent(username)}`, {
                     method: 'DELETE'
@@ -1506,7 +1508,7 @@ deleteAccountBtn.addEventListener('click', async () => {
                 console.log('Server not available, deleted from localStorage only:', error);
             }
         } else {
-            console.log('Running from file:// protocol - deleted from localStorage only');
+            console.log('Running from static hosting - deleted from localStorage only');
         }
         
         // Clear statistics display
@@ -1559,10 +1561,10 @@ downloadBtn.addEventListener('click', async () => {
         return;
     }
     
-    // Try to download from server first, fallback to localStorage (skip if file:// protocol)
+    // Try to download from server first, fallback to localStorage (skip if static hosting)
     let downloadSuccess = false;
     
-    if (!isFileProtocol) {
+    if (!isStaticHosting) {
         try {
             // Try to download from server
             const response = await fetch(`${API_BASE_URL}/download/${encodeURIComponent(username)}/${format}`, {
@@ -1629,10 +1631,10 @@ downloadBtn.addEventListener('click', async () => {
             // Continue to localStorage fallback
         }
     } else {
-        console.log('Running from file:// protocol - using localStorage for download');
+        console.log('Running from static hosting - using localStorage for download');
     }
     
-    // If server download failed or file:// protocol, create file from localStorage
+    // If server download failed or static hosting, create file from localStorage
     if (!downloadSuccess) {
         try {
             let content, filename, mimeType;
