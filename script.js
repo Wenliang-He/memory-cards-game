@@ -416,6 +416,9 @@ const deleteAccountBtn = document.getElementById('delete-account-btn');
 // API base URL
 const API_BASE_URL = 'http://localhost:3000/api';
 
+// Check if running from file:// protocol
+const isFileProtocol = window.location.protocol === 'file:';
+
 // Initialize game
 function initGame() {
     const gridSize = parseInt(gridSizeSelect.value);
@@ -779,27 +782,31 @@ async function saveGameHistory(username, time, moves, gridSize, theme = 'animals
     
     console.log('Saved to localStorage. Last game:', gameHistory[username][gameHistory[username].length - 1]);
     
-    // Save to backend server
-    try {
-        const response = await fetch(`${API_BASE_URL}/save-history`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                username: username,
-                ...gameData
-            })
-        });
-        
-        if (response.ok) {
-            console.log('Game history saved to server with theme:', validTheme);
-        } else {
-            console.error('Failed to save to server:', response.statusText);
+    // Save to backend server (skip if file:// protocol)
+    if (!isFileProtocol) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/save-history`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    ...gameData
+                })
+            });
+            
+            if (response.ok) {
+                console.log('Game history saved to server with theme:', validTheme);
+            } else {
+                console.error('Failed to save to server:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error saving to server:', error);
+            // Continue even if server save fails
         }
-    } catch (error) {
-        console.error('Error saving to server:', error);
-        // Continue even if server save fails
+    } else {
+        console.log('Running from file:// protocol - skipping server save');
     }
 }
 
@@ -810,51 +817,55 @@ async function getGameHistory(username) {
     console.log('getGameHistory - localStorageGames:', localStorageGames);
     console.log('getGameHistory - sample themes from localStorage:', localStorageGames.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
     
-    // Try to get from server and merge (but only if username matches exactly)
-    try {
-        const response = await fetch(`${API_BASE_URL}/get-history/${encodeURIComponent(username)}`);
-        if (response.ok) {
-            const data = await response.json();
-            console.log('getGameHistory - server response:', data);
-            if (data.success && data.games && data.games.length > 0) {
-                console.log('getGameHistory - server games:', data.games);
-                console.log('getGameHistory - sample themes from server:', data.games.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
-                // Merge server games with localStorage games
-                // Use Set to avoid duplicates based on date
-                const gameMap = new Map();
-                
-                // Add localStorage games FIRST (they have correct themes)
-                localStorageGames.forEach(game => {
-                    const key = `${game.date}_${game.time}_${game.moves}`;
-                    gameMap.set(key, game);
-                });
-                
-                // Add server games (they will overwrite if duplicate, but preserve theme from localStorage if server doesn't have it)
-                data.games.forEach(game => {
-                    const key = `${game.date}_${game.time}_${game.moves}`;
-                    const existingGame = gameMap.get(key);
-                    if (existingGame) {
-                        // If localStorage game exists, prefer its theme if server game doesn't have one
-                        if (!game.theme && existingGame.theme) {
-                            game.theme = existingGame.theme;
+    // Try to get from server and merge (but only if username matches exactly) - skip if file:// protocol
+    if (!isFileProtocol) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/get-history/${encodeURIComponent(username)}`);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('getGameHistory - server response:', data);
+                if (data.success && data.games && data.games.length > 0) {
+                    console.log('getGameHistory - server games:', data.games);
+                    console.log('getGameHistory - sample themes from server:', data.games.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
+                    // Merge server games with localStorage games
+                    // Use Set to avoid duplicates based on date
+                    const gameMap = new Map();
+                    
+                    // Add localStorage games FIRST (they have correct themes)
+                    localStorageGames.forEach(game => {
+                        const key = `${game.date}_${game.time}_${game.moves}`;
+                        gameMap.set(key, game);
+                    });
+                    
+                    // Add server games (they will overwrite if duplicate, but preserve theme from localStorage if server doesn't have it)
+                    data.games.forEach(game => {
+                        const key = `${game.date}_${game.time}_${game.moves}`;
+                        const existingGame = gameMap.get(key);
+                        if (existingGame) {
+                            // If localStorage game exists, prefer its theme if server game doesn't have one
+                            if (!game.theme && existingGame.theme) {
+                                game.theme = existingGame.theme;
+                            }
                         }
-                    }
-                    gameMap.set(key, game);
-                });
-                
-                const mergedGames = Array.from(gameMap.values());
-                console.log('getGameHistory - merged games:', mergedGames);
-                console.log('getGameHistory - sample themes from merged:', mergedGames.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
-                
-                // Update localStorage with merged data (using exact username case)
-                gameHistory[username] = mergedGames;
-                localStorage.setItem('memoryGameHistory', JSON.stringify(gameHistory));
-                
-                return mergedGames;
+                        gameMap.set(key, game);
+                    });
+                    
+                    const mergedGames = Array.from(gameMap.values());
+                    console.log('getGameHistory - merged games:', mergedGames);
+                    console.log('getGameHistory - sample themes from merged:', mergedGames.slice(0, 3).map(g => ({ date: g.date, theme: g.theme })));
+                    
+                    // Update localStorage with merged data (using exact username case)
+                    gameHistory[username] = mergedGames;
+                    localStorage.setItem('memoryGameHistory', JSON.stringify(gameHistory));
+                    
+                    return mergedGames;
+                }
             }
+        } catch (error) {
+            console.error('Error getting from server, using localStorage:', error);
         }
-    } catch (error) {
-        console.error('Error getting from server, using localStorage:', error);
+    } else {
+        console.log('Running from file:// protocol - using localStorage only');
     }
     
     // Return localStorage games (always available and case-sensitive)
@@ -867,19 +878,23 @@ async function getAllUsernames() {
     const gameHistory = JSON.parse(localStorage.getItem('memoryGameHistory') || '{}');
     const localStorageUsernames = Object.keys(gameHistory).sort();
     
-    // Try to get from server and merge with localStorage
-    try {
-        const response = await fetch(`${API_BASE_URL}/users`);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.usernames && data.usernames.length > 0) {
-                // Merge server usernames with localStorage usernames
-                const allUsernames = new Set([...localStorageUsernames, ...data.usernames]);
-                return Array.from(allUsernames).sort();
+    // Try to get from server and merge with localStorage - skip if file:// protocol
+    if (!isFileProtocol) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/users`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.usernames && data.usernames.length > 0) {
+                    // Merge server usernames with localStorage usernames
+                    const allUsernames = new Set([...localStorageUsernames, ...data.usernames]);
+                    return Array.from(allUsernames).sort();
+                }
             }
+        } catch (error) {
+            console.log('Server not available, using localStorage only:', error);
         }
-    } catch (error) {
-        console.log('Server not available, using localStorage only:', error);
+    } else {
+        console.log('Running from file:// protocol - using localStorage only');
     }
     
     // Return localStorage usernames (always available)
@@ -1475,19 +1490,23 @@ deleteAccountBtn.addEventListener('click', async () => {
             localStorage.setItem('memoryGameHistory', JSON.stringify(verifyHistory));
         }
         
-        // Delete from server - remove both JSON and CSV files
-        try {
-            const response = await fetch(`${API_BASE_URL}/delete-user/${encodeURIComponent(username)}`, {
-                method: 'DELETE'
-            });
-            if (response.ok) {
-                const data = await response.json();
-                console.log('User deleted from server:', data.message);
-            } else {
-                console.log('Server deletion failed, but localStorage deletion succeeded');
+        // Delete from server - remove both JSON and CSV files (skip if file:// protocol)
+        if (!isFileProtocol) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/delete-user/${encodeURIComponent(username)}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('User deleted from server:', data.message);
+                } else {
+                    console.log('Server deletion failed, but localStorage deletion succeeded');
+                }
+            } catch (error) {
+                console.log('Server not available, deleted from localStorage only:', error);
             }
-        } catch (error) {
-            console.log('Server not available, deleted from localStorage only:', error);
+        } else {
+            console.log('Running from file:// protocol - deleted from localStorage only');
         }
         
         // Clear statistics display
@@ -1540,76 +1559,80 @@ downloadBtn.addEventListener('click', async () => {
         return;
     }
     
-    // Try to download from server first, fallback to localStorage
+    // Try to download from server first, fallback to localStorage (skip if file:// protocol)
     let downloadSuccess = false;
     
-    try {
-        // Try to download from server
-        const response = await fetch(`${API_BASE_URL}/download/${encodeURIComponent(username)}/${format}`, {
-            method: 'GET',
-            headers: {
-                'Accept': format === 'csv' ? 'text/csv' : 'application/json'
-            }
-        });
-        
-        if (response.ok && response.status === 200) {
-            // For server downloads, verify content includes theme and regenerate if needed
-            const blob = await response.blob();
+    if (!isFileProtocol) {
+        try {
+            // Try to download from server
+            const response = await fetch(`${API_BASE_URL}/download/${encodeURIComponent(username)}/${format}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': format === 'csv' ? 'text/csv' : 'application/json'
+                }
+            });
             
-            if (format === 'csv') {
-                // Check if CSV includes Theme column
-                const text = await blob.text();
-                console.log('Server CSV content (first 200 chars):', text.substring(0, 200));
-                if (!text.includes('Theme')) {
-                    console.log('Server CSV missing Theme column, using client-side generation');
-                    downloadSuccess = false; // Force fallback to client-side
+            if (response.ok && response.status === 200) {
+                // For server downloads, verify content includes theme and regenerate if needed
+                const blob = await response.blob();
+                
+                if (format === 'csv') {
+                    // Check if CSV includes Theme column
+                    const text = await blob.text();
+                    console.log('Server CSV content (first 200 chars):', text.substring(0, 200));
+                    if (!text.includes('Theme')) {
+                        console.log('Server CSV missing Theme column, using client-side generation');
+                        downloadSuccess = false; // Force fallback to client-side
+                    } else {
+                        // Server CSV has theme, use it
+                        const newBlob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+                        const url = window.URL.createObjectURL(newBlob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${username}_history.${format}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        downloadSuccess = true;
+                    }
                 } else {
-                    // Server CSV has theme, use it
-                    const newBlob = new Blob([text], { type: 'text/csv;charset=utf-8' });
-                    const url = window.URL.createObjectURL(newBlob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${username}_history.${format}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    downloadSuccess = true;
-                }
-            } else {
-                // For JSON, ensure theme is included
-                const text = await blob.text();
-                try {
-                    const jsonData = JSON.parse(text);
-                    console.log('Server JSON data:', jsonData);
-                    // Ensure all games have theme
-                    const gamesWithTheme = Array.isArray(jsonData) ? jsonData.map(game => ({
-                        ...game,
-                        theme: game.theme || 'animals'
-                    })) : jsonData;
-                    const jsonContent = JSON.stringify(gamesWithTheme, null, 2);
-                    const newBlob = new Blob([jsonContent], { type: 'application/json' });
-                    const url = window.URL.createObjectURL(newBlob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${username}_history.${format}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    downloadSuccess = true;
-                } catch (e) {
-                    console.log('Error parsing server JSON, using client-side generation:', e);
-                    downloadSuccess = false; // Force fallback to client-side
+                    // For JSON, ensure theme is included
+                    const text = await blob.text();
+                    try {
+                        const jsonData = JSON.parse(text);
+                        console.log('Server JSON data:', jsonData);
+                        // Ensure all games have theme
+                        const gamesWithTheme = Array.isArray(jsonData) ? jsonData.map(game => ({
+                            ...game,
+                            theme: game.theme || 'animals'
+                        })) : jsonData;
+                        const jsonContent = JSON.stringify(gamesWithTheme, null, 2);
+                        const newBlob = new Blob([jsonContent], { type: 'application/json' });
+                        const url = window.URL.createObjectURL(newBlob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${username}_history.${format}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        downloadSuccess = true;
+                    } catch (e) {
+                        console.log('Error parsing server JSON, using client-side generation:', e);
+                        downloadSuccess = false; // Force fallback to client-side
+                    }
                 }
             }
+        } catch (error) {
+            console.log('Server download failed, using localStorage:', error);
+            // Continue to localStorage fallback
         }
-    } catch (error) {
-        console.log('Server download failed, using localStorage:', error);
-        // Continue to localStorage fallback
+    } else {
+        console.log('Running from file:// protocol - using localStorage for download');
     }
     
-    // If server download failed, create file from localStorage
+    // If server download failed or file:// protocol, create file from localStorage
     if (!downloadSuccess) {
         try {
             let content, filename, mimeType;
